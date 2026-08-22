@@ -127,7 +127,7 @@ export const ItinerarySectionForm: React.FC<ItinerarySectionFormProps> = ({
         notes: '',
       });
     }
-  }, [isOpen, initialData?.id, tripStartISO]);
+  }, [isOpen, initialData, tripStartISO]);
 
   const validate = (): boolean => {
     const newErrors: typeof errors = {};

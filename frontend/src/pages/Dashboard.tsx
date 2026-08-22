@@ -15,6 +15,7 @@ import {
 import { authService } from '../services/authService';
 import { User } from '../types/auth';
 import { Button } from '../components/ui/Button';
+import { Footer } from '../components/ui/Footer';
 import { LandingNavbar } from '../components/landing/LandingNavbar';
 
 export const Dashboard: React.FC = () => {
@@ -222,10 +223,8 @@ export const Dashboard: React.FC = () => {
         </div>
       </main>
 
-      {/* Global Footer */}
-      <footer className="border-t border-[#DAD4C7]/80 bg-[#FFF9EE]/80 backdrop-blur-md mt-16 py-6 px-4 sm:px-8 text-center text-xs text-[#8C867B]">
-        GlobeTrotter Personalized Travel Planning Platform • Explorer Profile
-      </footer>
+      {/* Universal Footer */}
+      <Footer />
     </div>
   );
 };

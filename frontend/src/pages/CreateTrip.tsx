@@ -13,6 +13,7 @@ import {
 import { LandingNavbar } from '../components/landing/LandingNavbar';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
+import { Footer } from '../components/ui/Footer';
 import { DestinationSearch } from '../components/trips/DestinationSearch';
 import { SuggestionPlaceCard } from '../components/trips/SuggestionPlaceCard';
 import { SuggestionActivityCard } from '../components/trips/SuggestionActivityCard';
@@ -441,10 +442,8 @@ export const CreateTrip: React.FC = () => {
         </form>
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-[#DAD4C7]/80 bg-[#FFF9EE]/80 backdrop-blur-md mt-16 py-6 px-4 sm:px-8 text-center text-xs text-[#8C867B]">
-        GlobeTrotter Personalized Travel Planning Platform • Step 1: Trip Initialization
-      </footer>
+      {/* Universal Footer */}
+      <Footer />
     </div>
   );
 };

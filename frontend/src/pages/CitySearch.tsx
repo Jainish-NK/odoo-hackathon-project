@@ -14,6 +14,7 @@ import { ActiveFilterChips, FilterChip } from '../components/discovery/ActiveFil
 import { CityCard } from '../components/discovery/CityCard';
 import { CityDetailsModal } from '../components/discovery/CityDetailsModal';
 import { AddToTripModal } from '../components/discovery/AddToTripModal';
+import { Footer } from '../components/ui/Footer';
 import { Button } from '../components/ui/Button';
 import { mockDestinations } from '../data/landingData';
 import { Destination, CityFilterState, CityGroupByOption, CitySortOption } from '../types/landing';
@@ -611,10 +612,8 @@ export const CitySearch: React.FC = () => {
         }}
       />
 
-      {/* Footer */}
-      <footer className="border-t border-[#DAD4C7]/80 bg-[#FFF9EE]/80 backdrop-blur-md mt-16 py-6 px-4 sm:px-8 text-center text-xs text-[#8C867B]">
-        GlobeTrotter Personalized Travel Planning Platform • City Discovery Catalog
-      </footer>
+      {/* Universal Footer */}
+      <Footer />
     </div>
   );
 };

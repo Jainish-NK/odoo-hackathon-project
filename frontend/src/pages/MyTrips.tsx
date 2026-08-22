@@ -7,6 +7,7 @@ import {
   RotateCcw,
 } from 'lucide-react';
 import { LandingNavbar } from '../components/landing/LandingNavbar';
+import { Footer } from '../components/ui/Footer';
 import { Button } from '../components/ui/Button';
 import { TripCard } from '../components/trips/TripCard';
 import { TripFilterBar } from '../components/trips/TripFilterBar';
@@ -432,10 +433,8 @@ export const MyTrips: React.FC = () => {
         isDeleting={isDeleting}
       />
 
-      {/* 6. Footer */}
-      <footer className="border-t border-[#DAD4C7]/80 bg-[#FFF9EE]/80 backdrop-blur-md mt-16 py-6 px-4 sm:px-8 text-center text-xs text-[#8C867B]">
-        GlobeTrotter Personalized Travel Planning Platform • My Trips
-      </footer>
+      {/* 6. Universal Footer */}
+      <Footer />
     </div>
   );
 };

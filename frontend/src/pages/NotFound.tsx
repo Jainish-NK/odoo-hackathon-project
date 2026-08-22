@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Compass, ArrowLeft, Plus } from 'lucide-react';
 import { LandingNavbar } from '../components/landing/LandingNavbar';
+import { Footer } from '../components/ui/Footer';
 import { Button } from '../components/ui/Button';
 
 export const NotFound: React.FC = () => {
@@ -52,9 +53,8 @@ export const NotFound: React.FC = () => {
         </div>
       </main>
 
-      <footer className="border-t border-[#DAD4C7]/80 bg-[#FFF9EE]/80 backdrop-blur-md py-6 px-4 sm:px-8 text-center text-xs text-[#8C867B]">
-        GlobeTrotter Personalized Travel Planning Platform • 404 Explorer
-      </footer>
+      {/* Universal Footer */}
+      <Footer />
     </div>
   );
 };
