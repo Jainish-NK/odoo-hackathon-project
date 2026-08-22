@@ -7,6 +7,7 @@ import {
   Sparkles,
   ArrowRight,
   Layers,
+  ShieldAlert,
 } from 'lucide-react';
 import { LandingNavbar } from '../components/landing/LandingNavbar';
 import { TripSummary } from '../components/itinerary/TripSummary';
@@ -29,6 +30,7 @@ export const BuildItinerary: React.FC = () => {
 
   const [trip, setTrip] = useState<Trip | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isUnauthorized, setIsUnauthorized] = useState(false);
 
   // Modal states
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -49,7 +51,11 @@ export const BuildItinerary: React.FC = () => {
     if (tripId) {
       const found = tripService.getTripById(tripId);
       if (found) {
-        setTrip(found);
+        if (found.userId && found.userId !== currentUser.id && found.userId !== 'usr_default_1') {
+          setIsUnauthorized(true);
+        } else {
+          setTrip(found);
+        }
       }
     }
     setIsLoading(false);
@@ -211,6 +217,37 @@ export const BuildItinerary: React.FC = () => {
           <div className="w-10 h-10 border-3 border-[#F4C95D] border-t-transparent rounded-full animate-spin mx-auto" />
           <p className="text-xs text-[#6F6A60] font-medium">Loading your itinerary...</p>
         </div>
+      </div>
+    );
+  }
+
+  if (isUnauthorized) {
+    return (
+      <div className="min-h-screen bg-[#F7F1E5] flex flex-col justify-between">
+        <LandingNavbar />
+        <main className="flex-1 max-w-lg mx-auto px-4 flex items-center justify-center py-16">
+          <div className="bg-[#FFF9EE] border border-[#DAD4C7] rounded-3xl p-8 text-center space-y-4 shadow-sm w-full">
+            <div className="w-14 h-14 rounded-full bg-[#FAECE7] text-[#D96B43] mx-auto flex items-center justify-center">
+              <ShieldAlert className="w-7 h-7" />
+            </div>
+            <h2 className="text-xl font-serif font-bold text-[#252525]">Private Trip</h2>
+            <p className="text-xs text-[#6F6A60] leading-relaxed">
+              You do not have permission to view or edit this trip itinerary because it belongs to a different explorer account.
+            </p>
+            <div className="pt-2 flex flex-col gap-2">
+              <Link to="/trips/create">
+                <Button variant="primary" size="md" fullWidth>
+                  Plan Your Own Trip
+                </Button>
+              </Link>
+              <Link to="/">
+                <Button variant="outline" size="md" fullWidth>
+                  Return to Home
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </main>
       </div>
     );
   }

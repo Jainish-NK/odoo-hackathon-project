@@ -1,7 +1,7 @@
 import React from 'react';
 import { Trip } from '../../types/trip';
 import { Calendar, MapPin, Clock, Wallet, Layers, Sparkles, CheckCircle2 } from 'lucide-react';
-import { calculateTotalBudget } from '../../services/tripService';
+import { calculateTotalBudget, formatDisplayDate } from '../../services/tripService';
 
 interface TripSummaryProps {
   trip: Trip;
@@ -9,19 +9,10 @@ interface TripSummaryProps {
 
 export const TripSummary: React.FC<TripSummaryProps> = ({ trip }) => {
   const totalBudget = trip.totalBudget ?? calculateTotalBudget(trip.sections);
+  const formattedDates = `${formatDisplayDate(trip.startDate)} — ${formatDisplayDate(trip.endDate)}`;
+
   const startDate = new Date(trip.startDate);
   const endDate = new Date(trip.endDate);
-  
-  const formattedDates = `${startDate.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  })} — ${endDate.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  })}`;
-
   const daysCount = Math.max(
     1,
     Math.round((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1

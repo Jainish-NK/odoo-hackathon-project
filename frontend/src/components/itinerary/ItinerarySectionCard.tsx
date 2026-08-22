@@ -17,6 +17,7 @@ import {
   Wallet,
 } from 'lucide-react';
 import { ItinerarySection, ItinerarySectionType } from '../../types/trip';
+import { formatDisplayDate } from '../../services/tripService';
 
 interface ItinerarySectionCardProps {
   section: ItinerarySection;
@@ -94,14 +95,8 @@ export const ItinerarySectionCard: React.FC<ItinerarySectionCardProps> = ({
   const config = typeConfig[section.type] || typeConfig.other;
   const IconComponent = config.icon;
 
-  const startDateFormatted = new Date(section.startDate).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-  });
-  const endDateFormatted = new Date(section.endDate).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-  });
+  const startDateFormatted = formatDisplayDate(section.startDate, false);
+  const endDateFormatted = formatDisplayDate(section.endDate, false);
 
   const isSameDay = section.startDate === section.endDate;
   const dateDisplay = isSameDay

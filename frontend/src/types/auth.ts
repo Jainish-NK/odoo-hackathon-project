@@ -32,6 +32,12 @@ export interface User {
   avatarUrl?: string;
   additionalInfo?: string;
   createdAt: string;
+  travelStyles?: string[];
+  budgetPreference?: 'Budget' | 'Moderate' | 'Luxury';
+  preferredCurrency?: string;
+  savedDestinationIds?: string[];
+  emailNotifications?: boolean;
+  tripReminders?: boolean;
 }
 
 export interface AuthResponse {

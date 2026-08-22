@@ -1,4 +1,11 @@
-import { Trip, ItinerarySection, SuggestedPlace, SuggestedActivity, TripDestinationOption } from '../types/trip';
+import {
+  Trip,
+  ItinerarySection,
+  ItinerarySectionType,
+  SuggestedPlace,
+  SuggestedActivity,
+  TripDestinationOption,
+} from '../types/trip';
 
 const STORAGE_KEY_TRIPS = 'globetrotter_user_trips_v2';
 
@@ -33,6 +40,66 @@ export const calculateTotalBudget = (sections?: ItinerarySection[]): number => {
   return sections.reduce((sum, s) => sum + (Number(s.budget) || 0), 0);
 };
 
+// Helper to calculate trip status dynamically based on current date
+export const getTripStatus = (startDateStr?: string, endDateStr?: string): 'ONGOING' | 'UPCOMING' | 'COMPLETED' => {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  const todayStr = `${y}-${m}-${d}`;
+
+  const start = normalizeToISODate(startDateStr);
+  const end = normalizeToISODate(endDateStr) || start;
+
+  if (!start) return 'UPCOMING';
+
+  if (todayStr > end) {
+    return 'COMPLETED';
+  } else if (todayStr < start) {
+    return 'UPCOMING';
+  } else {
+    return 'ONGOING';
+  }
+};
+
+// Helper to calculate duration in days
+export const calculateTripDurationDays = (startDateStr?: string, endDateStr?: string): number => {
+  const start = normalizeToISODate(startDateStr);
+  const end = normalizeToISODate(endDateStr) || start;
+  if (!start || !end) return 1;
+
+  const startParts = start.split('-').map(Number);
+  const endParts = end.split('-').map(Number);
+  if (startParts.length === 3 && endParts.length === 3) {
+    const d1 = new Date(startParts[0], startParts[1] - 1, startParts[2]);
+    const d2 = new Date(endParts[0], endParts[1] - 1, endParts[2]);
+    const diff = Math.round((d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24));
+    return Math.max(1, diff + 1);
+  }
+  return 1;
+};
+
+// Helper to format ISO date to readable display without timezone shifts
+export const formatDisplayDate = (val?: string, includeYear: boolean = true): string => {
+  if (!val) return '';
+  const iso = normalizeToISODate(val);
+  const parts = iso.split('-');
+  if (parts.length === 3) {
+    const y = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10) - 1;
+    const d = parseInt(parts[2], 10);
+    const dateObj = new Date(y, m, d);
+    if (!isNaN(dateObj.getTime())) {
+      return dateObj.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        ...(includeYear ? { year: 'numeric' } : {}),
+      });
+    }
+  }
+  return val;
+};
+
 // Default seed trips for demo
 const getInitialTrips = (): Trip[] => {
   const existing = localStorage.getItem(STORAGE_KEY_TRIPS);
@@ -63,6 +130,70 @@ const getInitialTrips = (): Trip[] => {
   }
 
   const defaultTrips: Trip[] = [
+    {
+      id: 'trip_ongoing',
+      userId: 'usr_default_1',
+      name: 'Amalfi Coastal Odyssey',
+      startDate: '2026-08-18',
+      endDate: '2026-08-25',
+      destinations: [
+        {
+          id: 'dest_amalfi',
+          city: 'Amalfi Coast',
+          country: 'Italy',
+          region: 'Europe',
+          flag: '🇮🇹',
+          image: 'https://images.unsplash.com/photo-1533105079780-92b9be482077?q=80&w=800&auto=format&fit=crop',
+        },
+      ],
+      sections: [
+        {
+          id: 'sec_amalfi_1',
+          order: 1,
+          type: 'travel',
+          title: 'Arrival in Naples & Coastal Shuttle',
+          description: 'Transfer from Naples International Airport along the scenic panoramic cliffside road to Positano.',
+          startDate: '2026-08-18',
+          endDate: '2026-08-18',
+          startTime: '10:00',
+          endTime: '12:30',
+          location: 'Positano, Amalfi Coast',
+          budget: 12000,
+          notes: 'Private scenic transfer with coastal photo stops.',
+        },
+        {
+          id: 'sec_amalfi_2',
+          order: 2,
+          type: 'hotel',
+          title: 'Villa Franca Clifftop Resort',
+          description: 'Luxury panoramic cliffside villa overlooking Positano bay.',
+          startDate: '2026-08-18',
+          endDate: '2026-08-25',
+          startTime: '14:00',
+          endTime: '11:00',
+          location: 'Viale Pasitea, Positano',
+          budget: 45000,
+          notes: 'Breakfast with sea view included.',
+        },
+        {
+          id: 'sec_amalfi_3',
+          order: 3,
+          type: 'activity',
+          title: 'Capri Island Private Speedboat & Blue Grotto',
+          description: 'Full-day private boat cruise around the Faraglioni rocks and secluded swim spots.',
+          startDate: '2026-08-21',
+          endDate: '2026-08-21',
+          startTime: '09:00',
+          endTime: '17:00',
+          location: 'Capri Marina Grande',
+          budget: 18500,
+          notes: 'Includes snorkel gear, Prosecco & limoncello.',
+        },
+      ],
+      totalBudget: 75500,
+      createdAt: '2026-08-01T10:00:00Z',
+      updatedAt: '2026-08-22T08:00:00Z',
+    },
     {
       id: 'trip_1',
       userId: 'usr_default_1',
@@ -241,11 +372,11 @@ const getInitialTrips = (): Trip[] => {
       updatedAt: '2026-08-22T08:00:00Z',
     },
     {
-      id: 'trip_3',
+      id: 'trip_completed',
       userId: 'usr_default_1',
-      name: 'Rajasthan Escape',
-      startDate: '2026-12-04',
-      endDate: '2026-12-09',
+      name: 'Rajasthan Royal Heritage',
+      startDate: '2026-02-04',
+      endDate: '2026-02-09',
       destinations: [
         {
           id: 'dest_jaipur',
@@ -263,8 +394,8 @@ const getInitialTrips = (): Trip[] => {
           type: 'sightseeing',
           title: 'Amber Fort Elephant Ramparts & Sheesh Mahal',
           description: 'Explore the grand hilltop fort and intricate mirror palace in Jaipur.',
-          startDate: '2026-12-04',
-          endDate: '2026-12-04',
+          startDate: '2026-02-04',
+          endDate: '2026-02-04',
           startTime: '09:30',
           endTime: '13:30',
           location: 'Amer, Jaipur, Rajasthan',
@@ -276,8 +407,8 @@ const getInitialTrips = (): Trip[] => {
           type: 'hotel',
           title: 'Heritage Haveli Resort Stay',
           description: 'Traditional royal palace stay with folk dances & rooftop dinner.',
-          startDate: '2026-12-04',
-          endDate: '2026-12-07',
+          startDate: '2026-02-04',
+          endDate: '2026-02-07',
           startTime: '14:00',
           endTime: '11:00',
           location: 'Old City, Jaipur',
@@ -285,8 +416,8 @@ const getInitialTrips = (): Trip[] => {
         },
       ],
       totalBudget: 20500,
-      createdAt: '2026-08-22T10:00:00Z',
-      updatedAt: '2026-08-22T08:00:00Z',
+      createdAt: '2026-01-20T10:00:00Z',
+      updatedAt: '2026-02-10T08:00:00Z',
     },
   ];
 
@@ -333,7 +464,11 @@ export const tripService = {
    */
   getUserTrips(userId: string): Trip[] {
     const trips = getInitialTrips();
-    return trips.filter((t) => t.userId === userId || t.userId === 'usr_default_1' || userId.startsWith('usr_'));
+    return trips.filter((t) => {
+      if (t.userId === userId) return true;
+      if (userId === 'usr_default_1' && (!t.userId || t.userId === 'usr_default_1')) return true;
+      return false;
+    });
   },
 
   /**
@@ -639,11 +774,144 @@ export const tripService = {
   /**
    * Delete entire trip
    */
-  deleteTrip(tripId: string): boolean {
+  deleteTrip(tripId: string, userId?: string): boolean {
     const trips = getInitialTrips();
+    const tripToDelete = trips.find((t) => t.id === tripId);
+    if (!tripToDelete) return false;
+
+    if (userId && tripToDelete.userId && tripToDelete.userId !== userId && tripToDelete.userId !== 'usr_default_1') {
+      return false; // Not authorized to delete another user's trip
+    }
+
     const filtered = trips.filter((t) => t.id !== tripId);
     if (filtered.length === trips.length) return false;
     saveTrips(filtered);
     return true;
   },
+
+  /**
+   * Add destination to existing trip
+   */
+  addDestinationToTrip(tripId: string, destination: TripDestinationOption): Trip | null {
+    const trips = getInitialTrips();
+    const index = trips.findIndex((t) => t.id === tripId);
+    if (index === -1) return null;
+
+    const trip = trips[index];
+    if (!Array.isArray(trip.destinations)) {
+      trip.destinations = [];
+    }
+
+    // Check if already in trip (by ID or city name)
+    const alreadyExists = trip.destinations.some(
+      (d) => d.id === destination.id || d.city.toLowerCase() === destination.city.toLowerCase()
+    );
+    if (alreadyExists) return trip;
+
+    trip.destinations.push(destination);
+    trip.updatedAt = new Date().toISOString();
+
+    trips[index] = trip;
+    saveTrips(trips);
+    return trip;
+  },
+
+  /**
+   * Add activity or place to existing trip
+   */
+  addActivityToTrip(
+    tripId: string,
+    activity: {
+      id: string;
+      name: string;
+      city: string;
+      country?: string;
+      category?: string;
+      type?: string;
+      duration?: string;
+      estimatedCost?: string;
+      costNumeric?: number;
+      rating?: number;
+      image?: string;
+      description?: string;
+    },
+    autoAddCity = true
+  ): Trip | null {
+    const trips = getInitialTrips();
+    const index = trips.findIndex((t) => t.id === tripId);
+    if (index === -1) return null;
+
+    const trip = trips[index];
+    if (!Array.isArray(trip.sections)) {
+      trip.sections = [];
+    }
+    if (!Array.isArray(trip.destinations)) {
+      trip.destinations = [];
+    }
+
+    // 1. Auto add city to trip destinations if not already present
+    if (autoAddCity && activity.city) {
+      const hasCity = trip.destinations.some(
+        (d) => d.city.toLowerCase() === activity.city.toLowerCase()
+      );
+      if (!hasCity) {
+        trip.destinations.push({
+          id: `dest_${activity.city.toLowerCase().replace(/\s+/g, '_')}`,
+          city: activity.city,
+          country: activity.country || '',
+          region: 'Global',
+          flag: '📍',
+          image: activity.image || 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?q=80&w=800&auto=format&fit=crop',
+        });
+      }
+    }
+
+    // 2. Prevent duplicate itinerary section
+    const alreadyExists = trip.sections.some(
+      (s) => s.title.toLowerCase() === activity.name.toLowerCase()
+    );
+    if (alreadyExists) return trip;
+
+    // 3. Create Itinerary Section
+    const nextOrder = trip.sections.length + 1;
+    const cat = (activity.category || activity.type || 'activity').toLowerCase();
+    const sectionType: ItinerarySectionType =
+      cat.includes('food') || cat.includes('culinary')
+        ? 'food'
+        : cat.includes('sightseeing') || cat.includes('heritage') || cat.includes('art')
+        ? 'sightseeing'
+        : 'activity';
+
+    const costNum =
+      activity.costNumeric !== undefined
+        ? activity.costNumeric
+        : activity.estimatedCost
+        ? parseInt(activity.estimatedCost.replace(/[^0-9]/g, ''), 10) || 2500
+        : 2500;
+
+    const newSection: ItinerarySection = {
+      id: `sec_${Date.now()}_${nextOrder}`,
+      order: nextOrder,
+      title: activity.name,
+      type: sectionType,
+      description: activity.description || `${activity.name} in ${activity.city}. Duration: ${activity.duration || '2-3 hrs'}.`,
+      startDate: trip.startDate,
+      endDate: trip.endDate,
+      startTime: '10:00',
+      endTime: '13:00',
+      location: `${activity.name}, ${activity.city}${activity.country ? ', ' + activity.country : ''}`,
+      budget: costNum,
+      notes: `Category: ${activity.category || activity.type || 'Experience'} • Rating: ⭐ ${activity.rating || 4.8}`,
+    };
+
+    trip.sections.push(newSection);
+    trip.totalBudget = calculateTotalBudget(trip.sections);
+    trip.updatedAt = new Date().toISOString();
+
+    trips[index] = trip;
+    saveTrips(trips);
+    return trip;
+  },
 };
+
+

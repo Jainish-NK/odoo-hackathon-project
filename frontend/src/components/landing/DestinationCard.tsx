@@ -14,6 +14,7 @@ export const DestinationCard: React.FC<DestinationCardProps> = ({
 }) => {
   const { showToast } = useToast();
   const [isSaved, setIsSaved] = useState(false);
+  const [imgSrc, setImgSrc] = useState(destination.image);
 
   const toggleSave = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -41,9 +42,10 @@ export const DestinationCard: React.FC<DestinationCardProps> = ({
       {/* Top Image Container */}
       <div className="relative h-[165px] w-full overflow-hidden bg-[#EFE7D5]">
         <img
-          src={destination.image}
+          src={imgSrc}
           alt={`${destination.city}, ${destination.country}`}
           loading="lazy"
+          onError={() => setImgSrc('https://images.unsplash.com/photo-1488646953014-85cb44e25828?q=80&w=800&auto=format&fit=crop')}
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
 

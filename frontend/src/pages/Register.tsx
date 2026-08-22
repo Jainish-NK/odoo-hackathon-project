@@ -174,7 +174,7 @@ export const Register: React.FC = () => {
         const redirectTarget =
           (location.state as { from?: string })?.from ||
           new URLSearchParams(location.search).get('redirect') ||
-          '/dashboard';
+          '/';
 
         setTimeout(() => {
           navigate(redirectTarget, { replace: true });
