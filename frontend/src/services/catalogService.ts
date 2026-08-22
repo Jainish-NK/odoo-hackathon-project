@@ -135,35 +135,47 @@ function toActivityItem(activity: BackendActivity, cityName: string, countryName
 }
 
 export const catalogService = {
-  /** Fetches the full city catalog (paginated on the backend; pulls every page). */
+  /** Fetches the full city catalog */
   async getCities(): Promise<Destination[]> {
-    const limit = 100;
-    let page = 1;
-    const all: BackendCity[] = [];
+    try {
+      const limit = 100;
+      let page = 1;
+      const all: BackendCity[] = [];
 
-    for (;;) {
-      const res = await apiClient.get<BackendCity[]>('/cities', { page, limit }, false);
-      all.push(...res.data);
-      if (!res.meta || page >= res.meta.totalPages) break;
-      page += 1;
+      for (;;) {
+        const res = await apiClient.get<BackendCity[]>('/cities', { page, limit }, false);
+        all.push(...res.data);
+        if (!res.meta || page >= res.meta.totalPages) break;
+        page += 1;
+      }
+
+      if (all.length > 0) return all.map(toDestination);
+    } catch {
+      // Return empty array to use static fallback
     }
-
-    return all.map(toDestination);
+    return [];
   },
 
-  /** Fetches the full activity catalog, resolving each activity's city name/country for display. */
+  /** Fetches the full activity catalog */
   async getActivities(): Promise<ActivityItem[]> {
-    const limit = 100;
-    let page = 1;
-    const all: BackendActivity[] = [];
+    try {
+      const limit = 100;
+      let page = 1;
+      const all: BackendActivity[] = [];
 
-    for (;;) {
-      const res = await apiClient.get<BackendActivity[]>('/activities', { page, limit }, false);
-      all.push(...res.data);
-      if (!res.meta || page >= res.meta.totalPages) break;
-      page += 1;
+      for (;;) {
+        const res = await apiClient.get<BackendActivity[]>('/activities', { page, limit }, false);
+        all.push(...res.data);
+        if (!res.meta || page >= res.meta.totalPages) break;
+        page += 1;
+      }
+
+      if (all.length > 0) {
+        return all.map((a) => toActivityItem(a, a.city?.name ?? 'Unknown', a.city?.country ?? ''));
+      }
+    } catch {
+      // Return empty array to use static fallback
     }
-
-    return all.map((a) => toActivityItem(a, a.city?.name ?? 'Unknown', a.city?.country ?? ''));
+    return [];
   },
 };

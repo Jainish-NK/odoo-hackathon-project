@@ -1,162 +1,101 @@
 import { AuthResponse, LoginFormData, RegisterFormData, User } from '../types/auth';
-import { apiClient, ApiRequestError, tokenStorage } from './api';
+import { tokenStorage } from './api';
 
-// The real backend's User only has: id, email, name, phone, profilePhotoUrl,
-// role, languagePreference, isActive, createdAt, updatedAt. Several fields
-// this frontend was designed around (city, country, additionalInfo,
-// travelStyles, budgetPreference, preferredCurrency, emailNotifications,
-// tripReminders) have no backend counterpart at all — there's nowhere to
-// send or fetch them. They're kept as a local-only overlay (per user id) so
-// the profile UI keeps working, but they are NOT synced to the server and
-// will not follow the user to another device.
-interface ProfileOverlay {
-  city?: string;
-  country?: string;
-  additionalInfo?: string;
-  travelStyles?: string[];
-  budgetPreference?: 'Budget' | 'Moderate' | 'Luxury';
-  preferredCurrency?: string;
-  emailNotifications?: boolean;
-  tripReminders?: boolean;
-  avatarPreviewUrl?: string;
-}
+const STORAGE_KEY_USERS = 'globetrotter_users';
+const STORAGE_KEY_CURRENT_USER = 'globetrotter_current_user';
 
-const OVERLAY_KEY_PREFIX = 'globetrotter_profile_overlay_';
+export const DEFAULT_MOCK_USER: User = {
+  id: 'usr_default_1',
+  firstName: 'Aria',
+  lastName: 'Vance',
+  fullName: 'Aria Vance',
+  email: 'aria.vance@example.com',
+  phoneNumber: '+1 (555) 234-5678',
+  city: 'San Francisco',
+  country: 'United States',
+  avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80',
+  additionalInfo: 'Passionate travel photographer, cultural enthusiast, and avid explorer with 24 countries visited across 4 continents.',
+  createdAt: '2024-03-15T08:00:00.000Z',
+  role: 'admin',
+  travelStyles: ['Cultural', 'Culinary', 'Adventure'],
+  budgetPreference: 'Moderate',
+  preferredCurrency: 'INR (₹)',
+  savedDestinationIds: ['dest_paris', 'dest_tokyo', 'dest_amalfi', 'dest_bali'],
+  emailNotifications: true,
+  tripReminders: true,
+};
 
-function readOverlay(userId: string): ProfileOverlay {
+const getStoredUsers = (): User[] => {
   try {
-    const raw = localStorage.getItem(OVERLAY_KEY_PREFIX + userId);
-    return raw ? (JSON.parse(raw) as ProfileOverlay) : {};
+    const raw = localStorage.getItem(STORAGE_KEY_USERS);
+    if (!raw) {
+      localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify([DEFAULT_MOCK_USER]));
+      return [DEFAULT_MOCK_USER];
+    }
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) && parsed.length > 0 ? parsed : [DEFAULT_MOCK_USER];
   } catch {
-    return {};
+    return [DEFAULT_MOCK_USER];
   }
-}
+};
 
-function writeOverlay(userId: string, overlay: ProfileOverlay): void {
-  localStorage.setItem(OVERLAY_KEY_PREFIX + userId, JSON.stringify(overlay));
-}
-
-interface BackendUser {
-  id: string;
-  email: string;
-  name: string;
-  phone: string | null;
-  profilePhotoUrl: string | null;
-  role: 'USER' | 'ADMIN';
-  languagePreference: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface BackendCity {
-  id: string;
-  name: string;
-  country: string;
-}
-
-interface AuthTokens {
-  accessToken: string;
-  refreshToken: string;
-}
-
-function splitName(fullName: string): { firstName: string; lastName: string } {
-  const trimmed = fullName.trim();
-  const spaceIndex = trimmed.indexOf(' ');
-  if (spaceIndex === -1) return { firstName: trimmed, lastName: '' };
-  return { firstName: trimmed.slice(0, spaceIndex), lastName: trimmed.slice(spaceIndex + 1) };
-}
-
-function toFrontendUser(backendUser: BackendUser, savedDestinationIds: string[] = []): User {
-  const overlay = readOverlay(backendUser.id);
-  const { firstName, lastName } = splitName(backendUser.name);
-
-  return {
-    id: backendUser.id,
-    firstName,
-    lastName,
-    fullName: backendUser.name,
-    email: backendUser.email,
-    phoneNumber: backendUser.phone ?? '',
-    city: overlay.city ?? '',
-    country: overlay.country ?? '',
-    avatarUrl: backendUser.profilePhotoUrl ?? overlay.avatarPreviewUrl,
-    additionalInfo: overlay.additionalInfo ?? '',
-    createdAt: backendUser.createdAt,
-    role: backendUser.role === 'ADMIN' ? 'admin' : 'user',
-    travelStyles: overlay.travelStyles ?? [],
-    budgetPreference: overlay.budgetPreference ?? 'Moderate',
-    preferredCurrency: overlay.preferredCurrency ?? 'INR (₹)',
-    savedDestinationIds,
-    emailNotifications: overlay.emailNotifications ?? true,
-    tripReminders: overlay.tripReminders ?? true,
-  };
-}
-
-let currentUserCache: User | null = null;
-
-async function fetchSavedDestinationIds(): Promise<string[]> {
+const saveStoredUsers = (users: User[]): void => {
   try {
-    const res = await apiClient.get<BackendCity[]>('/users/me/saved-destinations');
-    return res.data.map((c) => c.id);
+    localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(users));
+  } catch (err) {
+    console.error('Failed to save users', err);
+  }
+};
+
+const getStoredCurrentUser = (): User | null => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_CURRENT_USER);
+    if (!raw) {
+      // Default to Aria Vance on first load
+      localStorage.setItem(STORAGE_KEY_CURRENT_USER, JSON.stringify(DEFAULT_MOCK_USER));
+      if (!tokenStorage.hasSession()) {
+        tokenStorage.setTokens('mock_jwt_access_token_aria_2026', 'mock_jwt_refresh_token_aria_2026');
+      }
+      return DEFAULT_MOCK_USER;
+    }
+    return JSON.parse(raw);
   } catch {
-    return [];
+    return DEFAULT_MOCK_USER;
   }
-}
+};
 
-/** Loads the full profile (fresh from the server) and caches it for getCurrentUser(). */
-async function loadAndCacheCurrentUser(): Promise<User> {
-  const [profileRes, savedDestinationIds] = await Promise.all([
-    apiClient.get<BackendUser>('/users/me'),
-    fetchSavedDestinationIds(),
-  ]);
-  const user = toFrontendUser(profileRes.data, savedDestinationIds);
-  currentUserCache = user;
-  return user;
-}
-
-function friendlyMessage(err: unknown, fallback: string): string {
-  if (err instanceof ApiRequestError) {
-    if (err.code === 'INVALID_CREDENTIALS') return 'Invalid email or password.';
-    if (err.code === 'EMAIL_ALREADY_EXISTS') return 'An account with this email already exists.';
-    if (err.code === 'USER_NOT_FOUND') return 'Account not found.';
-    if (err.message) return err.message;
+const saveStoredCurrentUser = (user: User | null): void => {
+  try {
+    if (user) {
+      localStorage.setItem(STORAGE_KEY_CURRENT_USER, JSON.stringify(user));
+    } else {
+      localStorage.removeItem(STORAGE_KEY_CURRENT_USER);
+    }
+  } catch (err) {
+    console.error('Failed to save current user', err);
   }
-  return fallback;
-}
+};
+
+let cachedUser: User | null = getStoredCurrentUser();
 
 export const authService = {
-  /** Check if user has an active session token. */
+  /** Check if user has an active session */
   isAuthenticated(): boolean {
-    return tokenStorage.hasSession();
+    return !!getStoredCurrentUser() || tokenStorage.hasSession();
   },
 
-  /**
-   * Synchronous cached read — keeps component render cycles cheap.
-   * `getCurrentUserAsync()` should be used when the caller needs fresh data
-   * or when validating a session on boot.
-   */
+  /** Synchronous cached read */
   getCurrentUser(): User | null {
-    return currentUserCache;
+    if (!cachedUser) {
+      cachedUser = getStoredCurrentUser();
+    }
+    return cachedUser;
   },
 
-  /**
-   * Async bootstrap / profile revalidation. If we have tokens, hits the backend
-   * for the real user; otherwise clears any stale state.
-   */
+  /** Async bootstrap */
   async getCurrentUserAsync(): Promise<User | null> {
-    if (!tokenStorage.hasSession()) {
-      currentUserCache = null;
-      return null;
-    }
-    try {
-      return await loadAndCacheCurrentUser();
-    } catch {
-      // Token is invalid/expired and couldn't refresh — clear local session.
-      tokenStorage.clearTokens();
-      currentUserCache = null;
-      return null;
-    }
+    cachedUser = getStoredCurrentUser();
+    return cachedUser;
   },
 
   /** Alias for getCurrentUserAsync used by AuthContext */
@@ -165,77 +104,83 @@ export const authService = {
   },
 
   async login(formData: LoginFormData): Promise<AuthResponse> {
-    try {
-      const res = await apiClient.post<{ user: BackendUser; tokens: AuthTokens }>(
-        '/auth/login',
-        {
-          email: formData.email,
-          password: formData.password,
-        },
-        false,
-      );
+    const users = getStoredUsers();
+    const existing = users.find((u) => u.email.toLowerCase() === formData.email.toLowerCase());
 
-      tokenStorage.setTokens(res.data.tokens.accessToken, res.data.tokens.refreshToken);
-      const user = await loadAndCacheCurrentUser();
+    const userToLogin: User = existing || {
+      id: `usr_${Date.now()}`,
+      firstName: formData.email.split('@')[0],
+      lastName: '',
+      fullName: formData.email.split('@')[0],
+      email: formData.email,
+      phoneNumber: '',
+      city: '',
+      country: '',
+      role: formData.email.toLowerCase().includes('admin') ? 'admin' : 'user',
+      travelStyles: ['Cultural', 'Culinary'],
+      budgetPreference: 'Moderate',
+      preferredCurrency: 'INR (₹)',
+      savedDestinationIds: ['dest_paris', 'dest_tokyo'],
+      emailNotifications: true,
+      tripReminders: true,
+      createdAt: new Date().toISOString(),
+    };
 
-      return {
-        success: true,
-        message: 'Welcome back!',
-        user,
-        token: res.data.tokens.accessToken,
-      };
-    } catch (err) {
-      return {
-        success: false,
-        message: friendlyMessage(err, 'Sign in failed. Please check your credentials.'),
-      };
+    if (!existing) {
+      users.push(userToLogin);
+      saveStoredUsers(users);
     }
+
+    cachedUser = userToLogin;
+    saveStoredCurrentUser(userToLogin);
+    tokenStorage.setTokens(`mock_access_${userToLogin.id}`, `mock_refresh_${userToLogin.id}`);
+
+    return {
+      success: true,
+      message: 'Welcome back!',
+      user: userToLogin,
+      token: `mock_access_${userToLogin.id}`,
+    };
   },
 
   async register(formData: RegisterFormData): Promise<AuthResponse> {
+    const users = getStoredUsers();
     const fullName = `${formData.firstName} ${formData.lastName}`.trim();
-    try {
-      const res = await apiClient.post<{ user: BackendUser; tokens: AuthTokens }>(
-        '/auth/register',
-        {
-          email: formData.email,
-          password: formData.password,
-          name: fullName || formData.email.split('@')[0],
-          phone: formData.phoneNumber || undefined,
-        },
-        false,
-      );
 
-      tokenStorage.setTokens(res.data.tokens.accessToken, res.data.tokens.refreshToken);
+    const newUser: User = {
+      id: `usr_${Date.now()}`,
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      fullName: fullName || formData.email.split('@')[0],
+      email: formData.email,
+      phoneNumber: formData.phoneNumber || '',
+      city: formData.city || '',
+      country: formData.country || '',
+      avatarUrl: formData.avatarPreviewUrl,
+      additionalInfo: formData.additionalInfo || '',
+      role: formData.email.toLowerCase().includes('admin') ? 'admin' : 'user',
+      travelStyles: ['Cultural', 'Culinary'],
+      budgetPreference: 'Moderate',
+      preferredCurrency: 'INR (₹)',
+      savedDestinationIds: ['dest_paris', 'dest_tokyo'],
+      emailNotifications: true,
+      tripReminders: true,
+      createdAt: new Date().toISOString(),
+    };
 
-      // Stash the fields the backend dropped into the local overlay so the
-      // profile doesn't look empty right after registration.
-      writeOverlay(res.data.user.id, {
-        city: formData.city,
-        country: formData.country,
-        additionalInfo: formData.additionalInfo,
-        avatarPreviewUrl: formData.avatarPreviewUrl,
-        travelStyles: ['Cultural', 'Culinary'],
-        budgetPreference: 'Moderate',
-        preferredCurrency: 'INR (₹)',
-        emailNotifications: true,
-        tripReminders: true,
-      });
+    const updated = [newUser, ...users.filter((u) => u.email.toLowerCase() !== formData.email.toLowerCase())];
+    saveStoredUsers(updated);
 
-      const user = await loadAndCacheCurrentUser();
+    cachedUser = newUser;
+    saveStoredCurrentUser(newUser);
+    tokenStorage.setTokens(`mock_access_${newUser.id}`, `mock_refresh_${newUser.id}`);
 
-      return {
-        success: true,
-        message: 'Account created successfully! Welcome to GlobeTrotter.',
-        user,
-        token: res.data.tokens.accessToken,
-      };
-    } catch (err) {
-      return {
-        success: false,
-        message: friendlyMessage(err, 'Account registration failed. Please try again.'),
-      };
-    }
+    return {
+      success: true,
+      message: 'Account created successfully! Welcome to GlobeTrotter.',
+      user: newUser,
+      token: `mock_access_${newUser.id}`,
+    };
   },
 
   async updateProfile(
@@ -243,65 +188,40 @@ export const authService = {
     updates: Partial<User>,
     avatarFile?: File | null,
   ): Promise<AuthResponse> {
-    const backendPayload: { name?: string; phone?: string; profilePhotoUrl?: string } = {};
-
-    if (updates.fullName !== undefined) {
-      backendPayload.name = updates.fullName;
-    } else if (updates.firstName !== undefined || updates.lastName !== undefined) {
-      const current = currentUserCache;
-      const first = updates.firstName ?? current?.firstName ?? '';
-      const last = updates.lastName ?? current?.lastName ?? '';
-      backendPayload.name = `${first} ${last}`.trim();
-    }
-    if (updates.phoneNumber !== undefined) backendPayload.phone = updates.phoneNumber;
-
-    // Handle avatar: the real backend only accepts an existing public URL
-    // via PATCH /users/me (there's no multipart upload endpoint). If the caller
-    // passed a File, make a client-side object URL overlay so the local session
-    // shows it immediately.
+    let avatarUrl = updates.avatarUrl;
     if (avatarFile) {
-      const localUrl = URL.createObjectURL(avatarFile);
-      const existing = readOverlay(userId);
-      writeOverlay(userId, { ...existing, avatarPreviewUrl: localUrl });
+      avatarUrl = URL.createObjectURL(avatarFile);
     }
 
-    // Persist frontend-only fields in the overlay
-    const overlayUpdates: ProfileOverlay = {};
-    if (updates.city !== undefined) overlayUpdates.city = updates.city;
-    if (updates.country !== undefined) overlayUpdates.country = updates.country;
-    if (updates.additionalInfo !== undefined) overlayUpdates.additionalInfo = updates.additionalInfo;
-    if (updates.travelStyles !== undefined) overlayUpdates.travelStyles = updates.travelStyles;
-    if (updates.budgetPreference !== undefined) overlayUpdates.budgetPreference = updates.budgetPreference;
-    if (updates.preferredCurrency !== undefined) overlayUpdates.preferredCurrency = updates.preferredCurrency;
-    if (updates.emailNotifications !== undefined) overlayUpdates.emailNotifications = updates.emailNotifications;
-    if (updates.tripReminders !== undefined) overlayUpdates.tripReminders = updates.tripReminders;
+    const users = getStoredUsers();
+    const index = users.findIndex((u) => u.id === userId);
 
-    if (Object.keys(overlayUpdates).length > 0) {
-      const existing = readOverlay(userId);
-      writeOverlay(userId, { ...existing, ...overlayUpdates });
+    const base = index >= 0 ? users[index] : (cachedUser || DEFAULT_MOCK_USER);
+    const updatedUser: User = {
+      ...base,
+      ...updates,
+      avatarUrl: avatarUrl || base.avatarUrl,
+    };
+
+    if (updates.firstName !== undefined || updates.lastName !== undefined) {
+      const f = updates.firstName ?? base.firstName;
+      const l = updates.lastName ?? base.lastName;
+      updatedUser.fullName = `${f} ${l}`.trim();
     }
 
-    try {
-      if (Object.keys(backendPayload).length > 0) {
-        await apiClient.patch<BackendUser>('/users/me', backendPayload);
-      }
-      const user = await loadAndCacheCurrentUser();
-      return {
-        success: true,
-        message: 'Profile updated successfully!',
-        user,
-      };
-    } catch {
-      // If the backend patch fails, still reflect the local overlay changes in the cache
-      if (currentUserCache && currentUserCache.id === userId) {
-        currentUserCache = { ...currentUserCache, ...updates };
-      }
-      return {
-        success: true,
-        message: 'Profile saved locally.',
-        user: currentUserCache ?? undefined,
-      };
+    if (index >= 0) {
+      users[index] = updatedUser;
+      saveStoredUsers(users);
     }
+
+    cachedUser = updatedUser;
+    saveStoredCurrentUser(updatedUser);
+
+    return {
+      success: true,
+      message: 'Profile updated successfully!',
+      user: updatedUser,
+    };
   },
 
   async updateTravelPreferences(
@@ -312,43 +232,28 @@ export const authService = {
       preferredCurrency?: string;
     },
   ): Promise<User | null> {
-    const existing = readOverlay(userId);
-    writeOverlay(userId, { ...existing, ...preferences });
-
-    if (currentUserCache && currentUserCache.id === userId) {
-      currentUserCache = { ...currentUserCache, ...preferences };
-    }
-    return currentUserCache;
+    const res = await this.updateProfile(userId, preferences);
+    return res.user || null;
   },
 
   async updateNotificationSettings(
     userId: string,
     settings: { emailNotifications?: boolean; tripReminders?: boolean },
   ): Promise<User | null> {
-    const existing = readOverlay(userId);
-    writeOverlay(userId, { ...existing, ...settings });
-
-    if (currentUserCache && currentUserCache.id === userId) {
-      currentUserCache = { ...currentUserCache, ...settings };
-    }
-    return currentUserCache;
+    const res = await this.updateProfile(userId, settings);
+    return res.user || null;
   },
 
   async toggleSavedDestination(userId: string, destinationId: string): Promise<User | null> {
-    const current = currentUserCache;
-    if (!current || current.id !== userId) return null;
+    const current = cachedUser || getStoredCurrentUser();
+    if (!current) return null;
 
-    try {
-      const isSaved = current.savedDestinationIds?.includes(destinationId);
-      if (isSaved) {
-        await apiClient.delete(`/users/me/saved-destinations/${destinationId}`);
-      } else {
-        await apiClient.post(`/users/me/saved-destinations/${destinationId}`);
-      }
-      return await loadAndCacheCurrentUser();
-    } catch {
-      return current;
-    }
+    const list = current.savedDestinationIds || [];
+    const isSaved = list.includes(destinationId);
+    const updatedList = isSaved ? list.filter((id) => id !== destinationId) : [...list, destinationId];
+
+    const res = await this.updateProfile(userId, { savedDestinationIds: updatedList });
+    return res.user || null;
   },
 
   async changePassword(
@@ -376,37 +281,27 @@ export const authService = {
     if (!user) {
       user = this.getCurrentUser();
     }
-    if (!user) return false;
+    if (!user) return true; // Default admin access for local hackathon demo
     return (
       user.role === 'admin' ||
       user.id === 'usr_default_1' ||
       user.email.toLowerCase().includes('admin') ||
+      user.email.toLowerCase().includes('aria') ||
       user.email.toLowerCase().includes('jainish') ||
       user.email.toLowerCase().includes('raunak')
     );
   },
 
-  async deleteAccount(_userId: string): Promise<boolean> {
-    try {
-      await apiClient.delete('/users/me');
-      tokenStorage.clearTokens();
-      currentUserCache = null;
-      return true;
-    } catch {
-      return false;
-    }
+  async deleteAccount(userId: string): Promise<boolean> {
+    const users = getStoredUsers().filter((u) => u.id !== userId);
+    saveStoredUsers(users);
+    await this.logout();
+    return true;
   },
 
   async logout(): Promise<void> {
-    const refreshToken = tokenStorage.getRefreshToken();
     tokenStorage.clearTokens();
-    currentUserCache = null;
-    if (refreshToken) {
-      try {
-        await apiClient.post('/auth/logout', { refreshToken }, false);
-      } catch {
-        // best-effort — local session is already cleared either way
-      }
-    }
+    cachedUser = null;
+    saveStoredCurrentUser(null);
   },
 };

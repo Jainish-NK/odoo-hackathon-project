@@ -1,6 +1,4 @@
 import { TripDestinationOption, SuggestedPlace, SuggestedActivity, ActivityItem } from '../types/trip';
-import { Destination } from '../types/landing';
-import { catalogService } from '../services/catalogService';
 
 // Static fallback so trip creation still has something to show if the
 // backend is unreachable at load time — real catalog data (with real
@@ -526,94 +524,7 @@ const FALLBACK_ACTIVITIES_LIST: ActivityItem[] = [
   },
 ];
 
-export let availableDestinationOptions: TripDestinationOption[] = FALLBACK_DESTINATION_OPTIONS;
-export let mockSuggestedPlaces: SuggestedPlace[] = FALLBACK_SUGGESTED_PLACES;
-export let mockSuggestedActivities: SuggestedActivity[] = FALLBACK_SUGGESTED_ACTIVITIES;
-export let allActivitiesList: ActivityItem[] = FALLBACK_ACTIVITIES_LIST;
-
-const REGION_FLAGS: Record<string, string> = {
-  Europe: '🇪🇺',
-  Asia: '🌏',
-  Americas: '🌎',
-  Africa: '🌍',
-  Oceania: '🌏',
-  'Middle East': '🕌',
-};
-
-function toDestinationOption(d: Destination): TripDestinationOption {
-  return {
-    id: d.id,
-    city: d.city,
-    country: d.country,
-    region: d.region,
-    flag: REGION_FLAGS[d.region] ?? '📍',
-    image: d.image,
-  };
-}
-
-const PLACE_CATEGORY_MAP: Record<string, SuggestedPlace['category']> = {
-  Sightseeing: 'Sightseeing',
-  Heritage: 'Heritage',
-  Nature: 'Nature',
-  Architecture: 'Architecture',
-  Art: 'Art',
-  Culture: 'Heritage',
-};
-
-function toSuggestedPlace(a: ActivityItem): SuggestedPlace {
-  return {
-    id: a.id,
-    name: a.name,
-    city: a.city,
-    country: a.country,
-    category: PLACE_CATEGORY_MAP[a.category] ?? 'Sightseeing',
-    rating: a.rating,
-    estimatedTime: a.duration,
-    image: a.image,
-  };
-}
-
-const ACTIVITY_TYPE_MAP: Record<string, SuggestedActivity['type']> = {
-  'Food & Drink': 'Culinary',
-  Adventure: 'Adventure',
-  Culture: 'Cultural',
-  Cruise: 'Cruise',
-};
-
-function toSuggestedActivity(a: ActivityItem): SuggestedActivity {
-  return {
-    id: a.id,
-    name: a.name,
-    city: a.city,
-    country: a.country,
-    type: ACTIVITY_TYPE_MAP[a.category] ?? 'Tour',
-    duration: a.duration,
-    estimatedCost: a.estimatedCost,
-    rating: a.rating,
-    image: a.image,
-  };
-}
-
-try {
-  const [realCities, realActivities] = await Promise.all([
-    catalogService.getCities(),
-    catalogService.getActivities(),
-  ]);
-
-  if (realCities.length > 0) {
-    availableDestinationOptions = realCities.map(toDestinationOption);
-  }
-
-  if (realActivities.length > 0) {
-    allActivitiesList = realActivities;
-    // A representative slice, not the whole catalog, for the "quick pick"
-    // suggestion grids on CreateTrip/BuildItinerary — mirrors how many
-    // items the static fallback content used to show.
-    const sample = realActivities.slice(0, 8);
-    mockSuggestedPlaces = sample.map(toSuggestedPlace);
-    mockSuggestedActivities = sample.map(toSuggestedActivity);
-  }
-} catch {
-  // Backend unreachable at load time — keep the static fallback content above.
-}
-
+export const availableDestinationOptions: TripDestinationOption[] = FALLBACK_DESTINATION_OPTIONS;
+export const mockSuggestedPlaces: SuggestedPlace[] = FALLBACK_SUGGESTED_PLACES;
+export const mockSuggestedActivities: SuggestedActivity[] = FALLBACK_SUGGESTED_ACTIVITIES;
+export const allActivitiesList: ActivityItem[] = FALLBACK_ACTIVITIES_LIST;

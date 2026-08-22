@@ -6,12 +6,11 @@ import {
   SuggestedActivity,
   TripDestinationOption,
 } from '../types/trip';
-import { apiClient } from './api';
+
+// ── Storage key ──────────────────────────────────────────────────────────
+const STORAGE_KEY_TRIPS = 'globetrotter_trips';
 
 // ── Pure helpers (no network) ──────────────────────────────────────────
-// Unchanged from the original mock implementation — these are plain
-// date/string math, not something the backend integration touches.
-
 export const normalizeToISODate = (val?: string): string => {
   if (!val) return '';
   const trimmed = val.trim();
@@ -68,11 +67,12 @@ export const calculateTripDurationDays = (startDateStr?: string, endDateStr?: st
 
   const startParts = start.split('-').map(Number);
   const endParts = end.split('-').map(Number);
+
   if (startParts.length === 3 && endParts.length === 3) {
     const d1 = new Date(startParts[0], startParts[1] - 1, startParts[2]);
     const d2 = new Date(endParts[0], endParts[1] - 1, endParts[2]);
-    const diff = Math.round((d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24));
-    return Math.max(1, diff + 1);
+    const diff = Math.round((d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    return diff > 0 ? diff : 1;
   }
   return 1;
 };
@@ -97,158 +97,263 @@ export const formatDisplayDate = (val?: string, includeYear: boolean = true): st
   return val;
 };
 
-// ── Backend shapes (see src/modules/trips, src/modules/budgets) ───────
+// ── Initial Mock Trips ──────────────────────────────────────────────────
+export const seedMockTrips: Trip[] = [
+  {
+    id: 'trip_ongoing',
+    userId: 'usr_default_1',
+    name: 'Amalfi Coastal Odyssey',
+    startDate: '2026-08-20',
+    endDate: '2026-08-26',
+    notes: 'Mediterranean summer getaway exploring picturesque cliffside villages, lemon groves, and secluded grottos.',
+    destinations: [
+      {
+        id: 'dest_amalfi',
+        city: 'Amalfi Coast',
+        country: 'Italy',
+        region: 'Europe',
+        flag: '🇮🇹',
+        image: 'https://images.unsplash.com/photo-1533105079780-92b9be482077?q=80&w=800&auto=format&fit=crop',
+      },
+      {
+        id: 'dest_rome',
+        city: 'Rome',
+        country: 'Italy',
+        region: 'Europe',
+        flag: '🇮🇹',
+        image: 'https://images.unsplash.com/photo-1552832230-c0197dd311b5?q=80&w=800&auto=format&fit=crop',
+      },
+    ],
+    sections: [
+      {
+        id: 'sec_101',
+        order: 1,
+        type: 'travel',
+        title: 'Flight: Rome FCO to Naples + Private Transfer',
+        description: 'Private transfer from Rome FCO to Amalfi Coast.',
+        location: 'Naples Capodichino Airport',
+        startDate: '2026-08-20',
+        endDate: '2026-08-20',
+        startTime: '09:00',
+        endTime: '11:30',
+        budget: 14500,
+        notes: 'Driver waiting at Terminal 3 arrivals with name placard.',
+      },
+      {
+        id: 'sec_102',
+        order: 2,
+        type: 'hotel',
+        title: 'Hotel Santa Caterina (Sea View Suite)',
+        description: 'Luxury cliffside suite with private balcony.',
+        location: 'SS Amalfitana, 9, Amalfi',
+        startDate: '2026-08-20',
+        endDate: '2026-08-24',
+        startTime: '14:00',
+        budget: 38000,
+        notes: 'Clifftop saltwater pool and private elevator down to beach club.',
+      },
+      {
+        id: 'sec_103',
+        order: 3,
+        type: 'activity',
+        title: 'Private Sunset Gozzo Boat Cruise around Capri',
+        description: 'Private 4-hour sunset cruise along Faraglioni rocks.',
+        location: 'Marina Grande, Capri',
+        startDate: '2026-08-21',
+        endDate: '2026-08-21',
+        startTime: '16:30',
+        endTime: '20:00',
+        budget: 9500,
+        notes: 'Includes prosecco, fresh fruit, and snorkeling in Green Grotto.',
+      },
+      {
+        id: 'sec_104',
+        order: 4,
+        type: 'food',
+        title: 'Dinner at Ristorante Marina Grande',
+        description: 'Waterfront seafood tasting menu.',
+        location: 'Viale della Regione 4, Amalfi',
+        startDate: '2026-08-21',
+        endDate: '2026-08-21',
+        startTime: '20:30',
+        budget: 4200,
+        notes: 'Try the handmade scialatielli with seafood and local limoncello.',
+      },
+    ],
+    totalBudget: 66200,
+    createdAt: '2026-08-01T10:00:00Z',
+    updatedAt: '2026-08-20T08:00:00Z',
+  },
+  {
+    id: 'trip_1',
+    userId: 'usr_default_1',
+    name: 'Europe Discovery Tour',
+    startDate: '2026-09-10',
+    endDate: '2026-09-20',
+    notes: 'Classic European grand tour across four iconic capitals and cultural hubs.',
+    destinations: [
+      {
+        id: 'dest_paris',
+        city: 'Paris',
+        country: 'France',
+        region: 'Europe',
+        flag: '🇫🇷',
+        image: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?q=80&w=800&auto=format&fit=crop',
+      },
+      {
+        id: 'dest_amsterdam',
+        city: 'Amsterdam',
+        country: 'Netherlands',
+        region: 'Europe',
+        flag: '🇳🇱',
+        image: 'https://images.unsplash.com/photo-1534351590666-13e3e96b5017?q=80&w=800&auto=format&fit=crop',
+      },
+      {
+        id: 'dest_berlin',
+        city: 'Berlin',
+        country: 'Germany',
+        region: 'Europe',
+        flag: '🇩🇪',
+        image: 'https://images.unsplash.com/photo-1560969184-10fe8719e047?q=80&w=800&auto=format&fit=crop',
+      },
+    ],
+    sections: [
+      {
+        id: 'sec_1',
+        order: 1,
+        type: 'hotel',
+        title: 'Le Marais Boutique Hotel',
+        description: 'Boutique stay in the historic Marais district.',
+        location: 'Paris, France',
+        startDate: '2026-09-10',
+        endDate: '2026-09-13',
+        budget: 18500,
+      },
+      {
+        id: 'sec_2',
+        order: 2,
+        type: 'sightseeing',
+        title: 'Louvre Masterpieces & Mona Lisa VIP Tour',
+        description: 'Skip-the-line guided museum tour.',
+        location: 'Paris, France',
+        startDate: '2026-09-11',
+        endDate: '2026-09-11',
+        budget: 4500,
+      },
+      {
+        id: 'sec_3',
+        order: 3,
+        type: 'travel',
+        title: 'Eurostar Express: Paris Gare du Nord to Amsterdam Centraal',
+        description: 'High-speed train between Paris and Amsterdam.',
+        location: 'Paris to Amsterdam',
+        startDate: '2026-09-14',
+        endDate: '2026-09-14',
+        budget: 6800,
+      },
+      {
+        id: 'sec_4',
+        order: 4,
+        type: 'activity',
+        title: 'Canal Cruise & Jordaan Culinary Walk',
+        description: 'Guided canal boat tour and artisan food tasting.',
+        location: 'Amsterdam, Netherlands',
+        startDate: '2026-09-15',
+        endDate: '2026-09-15',
+        budget: 4200,
+      },
+    ],
+    totalBudget: 34000,
+    createdAt: '2026-07-15T12:00:00Z',
+    updatedAt: '2026-08-10T14:00:00Z',
+  },
+  {
+    id: 'trip_2',
+    userId: 'usr_default_1',
+    name: 'Japan Autumn Discovery',
+    startDate: '2026-10-15',
+    endDate: '2026-10-24',
+    notes: 'Temples, neon alleys, and traditional onsen hot springs in Tokyo and Kyoto.',
+    destinations: [
+      {
+        id: 'dest_tokyo',
+        city: 'Tokyo',
+        country: 'Japan',
+        region: 'Asia',
+        flag: '🇯🇵',
+        image: 'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?q=80&w=800&auto=format&fit=crop',
+      },
+      {
+        id: 'dest_kyoto',
+        city: 'Kyoto',
+        country: 'Japan',
+        region: 'Asia',
+        flag: '🇯🇵',
+        image: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?q=80&w=800&auto=format&fit=crop',
+      },
+    ],
+    sections: [
+      {
+        id: 'sec_201',
+        order: 1,
+        type: 'hotel',
+        title: 'Shinjuku Prince Hotel',
+        description: 'Modern hotel in central Shinjuku.',
+        location: 'Tokyo, Japan',
+        startDate: '2026-10-15',
+        endDate: '2026-10-19',
+        budget: 22000,
+      },
+      {
+        id: 'sec_202',
+        order: 2,
+        type: 'food',
+        title: 'Tsukiji Market Street Food Tasting Tour',
+        description: 'Early morning street food and sushi sampling.',
+        location: 'Tsukiji, Tokyo',
+        startDate: '2026-10-16',
+        endDate: '2026-10-16',
+        budget: 3500,
+      },
+      {
+        id: 'sec_203',
+        order: 3,
+        type: 'travel',
+        title: 'Shinkansen Bullet Train: Tokyo to Kyoto',
+        description: 'Nozomi bullet train journey.',
+        location: 'Tokyo Station',
+        startDate: '2026-10-20',
+        endDate: '2026-10-20',
+        budget: 7200,
+      },
+    ],
+    totalBudget: 32700,
+    createdAt: '2026-07-20T09:00:00Z',
+    updatedAt: '2026-08-15T11:00:00Z',
+  },
+];
 
-interface BackendTripSummary {
-  id: string;
-  userId: string;
-  name: string;
-  description: string | null;
-  startDate: string;
-  endDate: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface BackendCity {
-  id: string;
-  name: string;
-  country: string;
-  region: string | null;
-  imageUrl: string | null;
-}
-
-interface BackendTripStop {
-  id: string;
-  cityId: string;
-  city: BackendCity;
-}
-
-interface BackendTripDetail extends BackendTripSummary {
-  stops: BackendTripStop[];
-}
-
-interface BackendExpense {
-  id: string;
-  category: 'TRANSPORT' | 'ACCOMMODATION' | 'ACTIVITIES' | 'MEALS' | 'OTHER';
-  description: string | null;
-  amount: string | number;
-  date: string;
-}
-
-const FALLBACK_IMAGE =
-  'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?q=80&w=800&auto=format&fit=crop';
-
-// ── Adapter: backend Trip + TripStop[] + Expense[] → frontend Trip ────
-//
-// The frontend's itinerary model is a single flat list of "sections"
-// (travel / hotel / activity / food / sightseeing / other) with free-text
-// title/location/notes. The real backend has no equivalent single entity —
-// it separates a scheduled catalog Activity (TripActivity, tied to a real
-// Activity id in a specific city) from a logged Expense (category + amount
-// + date, no catalog link required). Since sections here are user-authored
-// free text with no catalog backing, every section is persisted as an
-// Expense — that's the only backend entity that doesn't require linking to
-// a pre-existing catalog row. The trade-off: a section's exact time range,
-// free-text location, and notes are not persisted server-side (Expense has
-// no columns for them) and won't survive a reload. Everything else —
-// title, category/type, budget amount, date, and real backend ids — is
-// fully real and persisted.
-
-function categoryToSectionType(category: BackendExpense['category']): ItinerarySectionType {
-  switch (category) {
-    case 'TRANSPORT':
-      return 'travel';
-    case 'ACCOMMODATION':
-      return 'hotel';
-    case 'ACTIVITIES':
-      return 'activity';
-    case 'MEALS':
-      return 'food';
-    default:
-      return 'other';
-  }
-}
-
-function sectionTypeToCategory(type: ItinerarySectionType): BackendExpense['category'] {
-  switch (type) {
-    case 'travel':
-      return 'TRANSPORT';
-    case 'hotel':
-      return 'ACCOMMODATION';
-    case 'activity':
-    case 'sightseeing':
-      return 'ACTIVITIES';
-    case 'food':
-      return 'MEALS';
-    default:
-      return 'OTHER';
-  }
-}
-
-function toDateOnly(iso: string): string {
-  return iso.slice(0, 10);
-}
-
-function adaptTrip(trip: BackendTripDetail, expenses: BackendExpense[]): Trip {
-  const destinations: TripDestinationOption[] = trip.stops.map((stop) => ({
-    id: stop.cityId,
-    city: stop.city.name,
-    country: stop.city.country,
-    region: stop.city.region || 'Global',
-    flag: '📍',
-    image: stop.city.imageUrl || FALLBACK_IMAGE,
-  }));
-
-  const sections: ItinerarySection[] = expenses.map((exp, idx) => ({
-    id: exp.id,
-    order: idx + 1,
-    type: categoryToSectionType(exp.category),
-    title: exp.description || exp.category,
-    description: exp.description || '',
-    startDate: toDateOnly(exp.date),
-    endDate: toDateOnly(exp.date),
-    budget: Number(exp.amount) || 0,
-  }));
-
-  return {
-    id: trip.id,
-    userId: trip.userId,
-    name: trip.name,
-    startDate: toDateOnly(trip.startDate),
-    endDate: toDateOnly(trip.endDate),
-    destinations,
-    sections,
-    totalBudget: calculateTotalBudget(sections),
-    notes: trip.description ?? undefined,
-    createdAt: trip.createdAt,
-    updatedAt: trip.updatedAt,
-  };
-}
-
-async function fetchFullTrip(tripId: string): Promise<Trip | null> {
+const getStoredTrips = (): Trip[] => {
   try {
-    const [tripRes, expensesRes] = await Promise.all([
-      apiClient.get<BackendTripDetail>(`/trips/${tripId}`),
-      apiClient.get<BackendExpense[]>(`/trips/${tripId}/expenses`),
-    ]);
-    return adaptTrip(tripRes.data, expensesRes.data);
+    const raw = localStorage.getItem(STORAGE_KEY_TRIPS);
+    if (!raw) {
+      localStorage.setItem(STORAGE_KEY_TRIPS, JSON.stringify(seedMockTrips));
+      return seedMockTrips;
+    }
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) && parsed.length > 0 ? parsed : seedMockTrips;
   } catch {
-    return null;
+    return seedMockTrips;
   }
-}
+};
 
-async function createExpenseSection(
-  tripId: string,
-  input: { type: ItinerarySectionType; title: string; budget: number; date: string },
-): Promise<void> {
-  await apiClient.post(`/trips/${tripId}/expenses`, {
-    category: sectionTypeToCategory(input.type),
-    description: input.title,
-    amount: Math.max(1, Math.round(input.budget || 0)),
-    date: normalizeToISODate(input.date) || input.date,
-  });
-}
+const saveStoredTrips = (trips: Trip[]): void => {
+  try {
+    localStorage.setItem(STORAGE_KEY_TRIPS, JSON.stringify(trips));
+  } catch (err) {
+    console.error('Failed to save trips', err);
+  }
+};
 
 function parseCostFromLabel(label: string): number {
   const match = label.match(/([0-9,]+)/);
@@ -259,19 +364,14 @@ function parseCostFromLabel(label: string): number {
 }
 
 export const tripService = {
-  /** userId is accepted for call-site compatibility but unused — the backend scopes /trips to the authenticated caller. */
-  async getUserTrips(_userId: string): Promise<Trip[]> {
-    try {
-      const { data: summaries } = await apiClient.get<BackendTripSummary[]>('/trips', { limit: 100 });
-      const trips = await Promise.all(summaries.map((t) => fetchFullTrip(t.id)));
-      return trips.filter((t): t is Trip => t !== null);
-    } catch {
-      return [];
-    }
+  /** Get all trips for the user from local storage */
+  async getUserTrips(_userId?: string): Promise<Trip[]> {
+    return getStoredTrips();
   },
 
   async getTripById(tripId: string): Promise<Trip | null> {
-    return fetchFullTrip(tripId);
+    const trips = getStoredTrips();
+    return trips.find((t) => t.id === tripId) || null;
   },
 
   async createTrip(data: {
@@ -284,79 +384,107 @@ export const tripService = {
     selectedActivities?: SuggestedActivity[];
     notes?: string;
   }): Promise<Trip> {
+    const trips = getStoredTrips();
     const startDate = normalizeToISODate(data.startDate);
     const endDate = normalizeToISODate(data.endDate);
 
-    const { data: created } = await apiClient.post<BackendTripSummary>('/trips', {
-      name: data.name,
-      description: data.notes || undefined,
-      startDate,
-      endDate,
-    });
-
-    // Each destination becomes a real trip stop. A destination whose id
-    // isn't a real backend city (or whose dates don't validate) is skipped
-    // rather than failing the whole trip creation.
-    for (const dest of data.destinations) {
-      await apiClient
-        .post(`/trips/${created.id}/stops`, { cityId: dest.id, startDate, endDate })
-        .catch(() => undefined);
-    }
+    const sections: ItinerarySection[] = [];
+    let order = 1;
 
     for (const place of data.selectedPlaces ?? []) {
-      await createExpenseSection(created.id, {
+      sections.push({
+        id: `sec_place_${Date.now()}_${order}`,
+        order: order++,
         type: 'sightseeing',
         title: place.name,
+        description: `Visit and explore ${place.name}.`,
+        location: place.city ? `${place.city}, ${place.country || ''}` : '',
         budget: 2500,
-        date: startDate,
-      }).catch(() => undefined);
+        startDate,
+        endDate: startDate,
+      });
     }
 
     for (const act of data.selectedActivities ?? []) {
-      await createExpenseSection(created.id, {
+      sections.push({
+        id: `sec_act_${Date.now()}_${order}`,
+        order: order++,
         type: 'activity',
         title: act.name,
+        description: `Activity: ${act.name} (${act.duration || '2 hours'}).`,
+        location: act.city ? `${act.city}, ${act.country || ''}` : '',
         budget: parseCostFromLabel(act.estimatedCost),
-        date: endDate,
-      }).catch(() => undefined);
+        startDate: endDate || startDate,
+        endDate: endDate || startDate,
+      });
     }
 
-    const full = await fetchFullTrip(created.id);
-    return full ?? adaptTrip({ ...created, stops: [] }, []);
+    const newTrip: Trip = {
+      id: `trip_${Date.now()}`,
+      userId: data.userId || 'usr_default_1',
+      name: data.name,
+      startDate,
+      endDate,
+      destinations: data.destinations,
+      sections,
+      totalBudget: calculateTotalBudget(sections),
+      notes: data.notes,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    const updated = [newTrip, ...trips];
+    saveStoredTrips(updated);
+    return newTrip;
   },
 
   async updateTrip(tripId: string, updates: Partial<Trip>): Promise<Trip | null> {
-    const patch: Record<string, unknown> = {};
-    if (updates.name !== undefined) patch.name = updates.name;
-    if (updates.notes !== undefined) patch.description = updates.notes;
-    if (updates.startDate !== undefined) patch.startDate = normalizeToISODate(updates.startDate);
-    if (updates.endDate !== undefined) patch.endDate = normalizeToISODate(updates.endDate);
+    const trips = getStoredTrips();
+    const index = trips.findIndex((t) => t.id === tripId);
+    if (index === -1) return null;
 
-    try {
-      if (Object.keys(patch).length > 0) {
-        await apiClient.patch(`/trips/${tripId}`, patch);
-      }
-    } catch {
-      return null;
+    const base = trips[index];
+    const updatedTrip: Trip = {
+      ...base,
+      ...updates,
+      updatedAt: new Date().toISOString(),
+    };
+    if (updates.sections) {
+      updatedTrip.totalBudget = calculateTotalBudget(updates.sections);
     }
-    return fetchFullTrip(tripId);
+
+    trips[index] = updatedTrip;
+    saveStoredTrips(trips);
+    return updatedTrip;
   },
 
   async addItinerarySection(
     tripId: string,
     sectionData: Omit<ItinerarySection, 'id' | 'order'>,
   ): Promise<Trip | null> {
-    try {
-      await createExpenseSection(tripId, {
-        type: sectionData.type,
-        title: sectionData.title,
-        budget: sectionData.budget,
-        date: sectionData.startDate,
-      });
-    } catch {
-      return null;
-    }
-    return fetchFullTrip(tripId);
+    const trips = getStoredTrips();
+    const index = trips.findIndex((t) => t.id === tripId);
+    if (index === -1) return null;
+
+    const trip = trips[index];
+    const newSection: ItinerarySection = {
+      ...sectionData,
+      description: sectionData.description || sectionData.title,
+      id: `sec_${Date.now()}`,
+      order: (trip.sections?.length || 0) + 1,
+    };
+
+    const sections = [...(trip.sections || []), newSection];
+    const updatedTrip: Trip = {
+      ...trip,
+      sections,
+      totalBudget: calculateTotalBudget(sections),
+      updatedAt: new Date().toISOString(),
+    };
+
+    trips[index] = updatedTrip;
+    saveStoredTrips(trips);
+    return updatedTrip;
   },
 
   async updateItinerarySection(
@@ -364,92 +492,105 @@ export const tripService = {
     sectionId: string,
     updates: Partial<ItinerarySection>,
   ): Promise<Trip | null> {
-    const patch: Record<string, unknown> = {};
-    if (updates.type !== undefined) patch.category = sectionTypeToCategory(updates.type);
-    if (updates.title !== undefined) patch.description = updates.title;
-    if (updates.budget !== undefined) patch.amount = Math.max(1, Math.round(updates.budget));
-    if (updates.startDate !== undefined) patch.date = normalizeToISODate(updates.startDate);
+    const trips = getStoredTrips();
+    const index = trips.findIndex((t) => t.id === tripId);
+    if (index === -1) return null;
 
-    try {
-      if (Object.keys(patch).length > 0) {
-        await apiClient.patch(`/trips/${tripId}/expenses/${sectionId}`, patch);
-      }
-    } catch {
-      return null;
-    }
-    return fetchFullTrip(tripId);
+    const trip = trips[index];
+    const sections = (trip.sections || []).map((s) => (s.id === sectionId ? { ...s, ...updates } : s));
+
+    const updatedTrip: Trip = {
+      ...trip,
+      sections,
+      totalBudget: calculateTotalBudget(sections),
+      updatedAt: new Date().toISOString(),
+    };
+
+    trips[index] = updatedTrip;
+    saveStoredTrips(trips);
+    return updatedTrip;
   },
 
   async deleteItinerarySection(tripId: string, sectionId: string): Promise<Trip | null> {
-    try {
-      await apiClient.delete(`/trips/${tripId}/expenses/${sectionId}`);
-    } catch {
-      return null;
-    }
-    return fetchFullTrip(tripId);
+    const trips = getStoredTrips();
+    const index = trips.findIndex((t) => t.id === tripId);
+    if (index === -1) return null;
+
+    const trip = trips[index];
+    const sections = (trip.sections || []).filter((s) => s.id !== sectionId);
+
+    const updatedTrip: Trip = {
+      ...trip,
+      sections,
+      totalBudget: calculateTotalBudget(sections),
+      updatedAt: new Date().toISOString(),
+    };
+
+    trips[index] = updatedTrip;
+    saveStoredTrips(trips);
+    return updatedTrip;
   },
 
-  /**
-   * The backend's Expense model has no ordering column, so this reorders
-   * the already-fetched sections in memory and returns them — it renders
-   * correctly right away but isn't persisted, and reverts to date order on
-   * the next full reload. Every other section mutation here is fully real
-   * and persisted; this is the one deliberate, disclosed exception.
-   */
   async reorderItinerarySections(tripId: string, sectionIdsInOrder: string[]): Promise<Trip | null> {
-    const trip = await fetchFullTrip(tripId);
-    if (!trip) return null;
+    const trips = getStoredTrips();
+    const index = trips.findIndex((t) => t.id === tripId);
+    if (index === -1) return null;
 
-    const byId = new Map(trip.sections.map((s) => [s.id, s]));
+    const trip = trips[index];
+    const byId = new Map((trip.sections || []).map((s) => [s.id, s]));
     const reordered: ItinerarySection[] = [];
+
     sectionIdsInOrder.forEach((id, idx) => {
       const section = byId.get(id);
       if (section) {
         reordered.push({ ...section, order: idx + 1 });
       }
     });
-    trip.sections.forEach((s) => {
+
+    (trip.sections || []).forEach((s) => {
       if (!sectionIdsInOrder.includes(s.id)) {
         reordered.push({ ...s, order: reordered.length + 1 });
       }
     });
 
-    return { ...trip, sections: reordered };
+    const updatedTrip: Trip = {
+      ...trip,
+      sections: reordered,
+      totalBudget: calculateTotalBudget(reordered),
+      updatedAt: new Date().toISOString(),
+    };
+
+    trips[index] = updatedTrip;
+    saveStoredTrips(trips);
+    return updatedTrip;
   },
 
   async deleteTrip(tripId: string, _userId?: string): Promise<boolean> {
-    try {
-      await apiClient.delete(`/trips/${tripId}`);
-      return true;
-    } catch {
-      return false;
-    }
+    const trips = getStoredTrips();
+    const filtered = trips.filter((t) => t.id !== tripId);
+    saveStoredTrips(filtered);
+    return true;
   },
 
   async addDestinationToTrip(tripId: string, destination: TripDestinationOption): Promise<Trip | null> {
-    const trip = await fetchFullTrip(tripId);
-    if (!trip) return null;
+    const trips = getStoredTrips();
+    const index = trips.findIndex((t) => t.id === tripId);
+    if (index === -1) return null;
+
+    const trip = trips[index];
     if (trip.destinations.some((d) => d.id === destination.id)) return trip;
 
-    try {
-      await apiClient.post(`/trips/${tripId}/stops`, {
-        cityId: destination.id,
-        startDate: trip.startDate,
-        endDate: trip.endDate,
-      });
-    } catch {
-      return null;
-    }
-    return fetchFullTrip(tripId);
+    const updatedTrip: Trip = {
+      ...trip,
+      destinations: [...trip.destinations, destination],
+      updatedAt: new Date().toISOString(),
+    };
+
+    trips[index] = updatedTrip;
+    saveStoredTrips(trips);
+    return updatedTrip;
   },
 
-  /**
-   * `autoAddCity` from the original mock signature is accepted for call-site
-   * compatibility but not acted on: the real Activity here doesn't carry
-   * its city's id (only a display name), so there's nothing valid to create
-   * a stop from without an extra lookup. The activity itself is still added
-   * as a budgeted section either way.
-   */
   async addActivityToTrip(
     tripId: string,
     activity: {
@@ -468,8 +609,11 @@ export const tripService = {
     },
     _autoAddCity = true,
   ): Promise<Trip | null> {
-    const trip = await fetchFullTrip(tripId);
-    if (!trip) return null;
+    const trips = getStoredTrips();
+    const index = trips.findIndex((t) => t.id === tripId);
+    if (index === -1) return null;
+
+    const trip = trips[index];
     if (trip.sections.some((s) => s.title.toLowerCase() === activity.name.toLowerCase())) return trip;
 
     const cat = (activity.category || activity.type || 'activity').toLowerCase();
@@ -481,18 +625,45 @@ export const tripService = {
           : 'activity';
     const budget = activity.costNumeric ?? parseCostFromLabel(activity.estimatedCost ?? '');
 
-    try {
-      await createExpenseSection(tripId, { type, title: activity.name, budget, date: trip.startDate });
-    } catch {
-      return null;
-    }
-    return fetchFullTrip(tripId);
+    const newSection: ItinerarySection = {
+      id: `sec_${Date.now()}`,
+      order: (trip.sections?.length || 0) + 1,
+      type,
+      title: activity.name,
+      description: activity.description || `Activity in ${activity.city}.`,
+      location: `${activity.city}${activity.country ? ', ' + activity.country : ''}`,
+      budget,
+      startDate: trip.startDate,
+      endDate: trip.startDate,
+    };
+
+    const sections = [...(trip.sections || []), newSection];
+    const updatedTrip: Trip = {
+      ...trip,
+      sections,
+      totalBudget: calculateTotalBudget(sections),
+      updatedAt: new Date().toISOString(),
+    };
+
+    trips[index] = updatedTrip;
+    saveStoredTrips(trips);
+    return updatedTrip;
   },
 
-  /** Copies a trip via the real backend endpoint (public trips, or the caller's own). */
-  async cloneTripForUser(sourceTrip: Trip, _newUserId: string): Promise<Trip> {
-    const { data: copied } = await apiClient.post<BackendTripSummary>(`/trips/${sourceTrip.id}/copy`, {});
-    const full = await fetchFullTrip(copied.id);
-    return full ?? adaptTrip({ ...copied, stops: [] }, []);
+  /** Copies a trip into the user's trips locally */
+  async cloneTripForUser(sourceTrip: Trip, newUserId = 'usr_default_1'): Promise<Trip> {
+    const trips = getStoredTrips();
+    const cloned: Trip = {
+      ...sourceTrip,
+      id: `trip_copy_${Date.now()}`,
+      userId: newUserId,
+      name: `${sourceTrip.name} (My Copy)`,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    const updated = [cloned, ...trips];
+    saveStoredTrips(updated);
+    return cloned;
   },
 };
