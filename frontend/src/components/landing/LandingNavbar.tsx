@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   Compass,
   Bell,
@@ -9,6 +9,8 @@ import {
   Sparkles,
   Plane,
   Bookmark,
+  Plus,
+  User as UserIcon,
 } from 'lucide-react';
 import { authService } from '../../services/authService';
 import { User } from '../../types/auth';
@@ -16,6 +18,7 @@ import { useToast } from '../../context/ToastContext';
 
 export const LandingNavbar: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { showToast } = useToast();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -27,9 +30,9 @@ export const LandingNavbar: React.FC = () => {
 
   useEffect(() => {
     setCurrentUser(authService.getCurrentUser());
-  }, []);
+  }, [location.pathname]);
 
-  // Close menus on outside click
+  // Close dropdowns on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
@@ -57,16 +60,30 @@ export const LandingNavbar: React.FC = () => {
     setIsProfileMenuOpen(false);
   };
 
-  const handleMyTripsClick = (e: React.MouseEvent) => {
-    if (!authService.getCurrentUser()) {
-      e.preventDefault();
-      showToast('info', 'Sign In Required', 'Please sign in to view your saved personal trips.');
-      navigate('/login?redirect=/#previous-trips', { state: { from: '/#previous-trips' } });
+  const handleMyTripsNav = () => {
+    setIsMobileMenuOpen(false);
+    const user = authService.getCurrentUser();
+    if (!user) {
+      showToast('info', 'Sign In Required', 'Please sign in to view your personal trips.');
+      navigate('/login?redirect=/trips', { state: { from: '/trips' } });
+      return;
+    }
+    navigate('/trips');
+  };
+
+  const handlePlanTripClick = () => {
+    setIsMobileMenuOpen(false);
+    const user = authService.getCurrentUser();
+    if (user) {
+      navigate('/trips/create');
+    } else {
+      showToast('info', 'Sign In Required', 'Please sign in to create and customize your trip.');
+      navigate('/login?redirect=/trips/create', { state: { from: '/trips/create' } });
     }
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full bg-[#FFF9EE]/90 backdrop-blur-md border-b border-[#DAD4C7]/80">
+    <header className="sticky top-0 z-40 w-full bg-[#FFF9EE]/95 backdrop-blur-md border-b border-[#DAD4C7]/80">
       <div className="max-w-7xl mx-auto px-4 sm:px-8 h-18 flex items-center justify-between">
         {/* Left: Brand Logo */}
         <Link to="/" className="flex items-center gap-2.5 group select-none">
@@ -84,30 +101,61 @@ export const LandingNavbar: React.FC = () => {
         </Link>
 
         {/* Center: Navigation Links (Desktop) */}
-        <nav className="hidden md:flex items-center gap-7">
-          <a
-            href="#explore"
-            className="text-[14px] font-medium text-[#252525] hover:text-[#C29326] transition-colors"
+        <nav className="hidden md:flex items-center gap-6">
+          <Link
+            to="/"
+            className={`text-[14px] font-medium transition-colors ${
+              location.pathname === '/' || location.pathname === '/home'
+                ? 'text-[#252525] font-semibold'
+                : 'text-[#6F6A60] hover:text-[#252525]'
+            }`}
           >
             Explore
-          </a>
-          <a
-            href="#top-destinations"
-            className="text-[14px] font-medium text-[#6F6A60] hover:text-[#252525] transition-colors"
+          </Link>
+          <Link
+            to="/cities"
+            className={`text-[14px] font-medium transition-colors ${
+              location.pathname === '/cities'
+                ? 'text-[#252525] font-semibold'
+                : 'text-[#6F6A60] hover:text-[#252525]'
+            }`}
           >
-            Destinations
-          </a>
-          <a
-            href="#previous-trips"
-            onClick={handleMyTripsClick}
-            className="text-[14px] font-medium text-[#6F6A60] hover:text-[#252525] transition-colors"
+            Cities
+          </Link>
+          <Link
+            to="/activities"
+            className={`text-[14px] font-medium transition-colors ${
+              location.pathname === '/activities'
+                ? 'text-[#252525] font-semibold'
+                : 'text-[#6F6A60] hover:text-[#252525]'
+            }`}
+          >
+            Activities
+          </Link>
+          <button
+            type="button"
+            onClick={handleMyTripsNav}
+            className={`text-[14px] font-medium transition-colors cursor-pointer ${
+              location.pathname === '/trips'
+                ? 'text-[#252525] font-semibold'
+                : 'text-[#6F6A60] hover:text-[#252525]'
+            }`}
           >
             My Trips
-          </a>
+          </button>
         </nav>
 
-        {/* Right: Actions (Notifications & Profile) */}
-        <div className="flex items-center gap-3">
+        {/* Right: Actions (Plan Trip, Notifications & Profile) */}
+        <div className="flex items-center gap-2.5 sm:gap-3">
+          {/* Quick "+ Plan a Trip" Button */}
+          <button
+            type="button"
+            onClick={handlePlanTripClick}
+            className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#F4C95D] hover:bg-[#E3B443] text-xs font-bold text-[#252525] transition-all shadow-xs cursor-pointer"
+          >
+            <Plus className="w-3.5 h-3.5" /> Plan a Trip
+          </button>
+
           {/* Notification Bell */}
           <div className="relative" ref={notifRef}>
             <button
@@ -173,7 +221,7 @@ export const LandingNavbar: React.FC = () => {
                   />
                 ) : (
                   <div className="w-7 h-7 rounded-full bg-[#E3B443]/30 text-[#252525] flex items-center justify-center font-bold text-xs">
-                    {currentUser.firstName.charAt(0)}
+                    {currentUser.firstName ? currentUser.firstName.charAt(0) : 'U'}
                   </div>
                 )}
               </button>
@@ -181,7 +229,7 @@ export const LandingNavbar: React.FC = () => {
               {/* Profile Dropdown */}
               {isProfileMenuOpen && (
                 <div
-                  className="absolute right-0 mt-2 w-52 bg-[#FFF9EE] border border-white/80 rounded-2xl shadow-xl p-2 z-50 animate-in fade-in zoom-in-95 duration-150"
+                  className="absolute right-0 mt-2 w-56 bg-[#FFF9EE] border border-white/80 rounded-2xl shadow-xl p-2 z-50 animate-in fade-in zoom-in-95 duration-150"
                   style={{ boxShadow: '0 16px 36px -8px rgba(45, 37, 24, 0.18)' }}
                 >
                   <div className="px-3 py-2 border-b border-[#DAD4C7]/60">
@@ -191,14 +239,18 @@ export const LandingNavbar: React.FC = () => {
                   <div className="py-1">
                     <button
                       type="button"
-                      onClick={() => {
-                        setIsProfileMenuOpen(false);
-                        showToast('info', 'My Trips', 'Viewing your saved trip itineraries.');
-                      }}
+                      onClick={handleMyTripsNav}
                       className="w-full text-left px-3 py-2 text-xs font-medium text-[#252525] hover:bg-black/5 rounded-xl transition-colors flex items-center gap-2 cursor-pointer"
                     >
-                      <Plane className="w-3.5 h-3.5 text-[#6F6A60]" /> My Trips
+                      <Plane className="w-3.5 h-3.5 text-[#6F6A60]" /> My Saved Trips
                     </button>
+                    <Link
+                      to="/profile"
+                      onClick={() => setIsProfileMenuOpen(false)}
+                      className="w-full text-left px-3 py-2 text-xs font-medium text-[#252525] hover:bg-black/5 rounded-xl transition-colors flex items-center gap-2 cursor-pointer"
+                    >
+                      <UserIcon className="w-3.5 h-3.5 text-[#6F6A60]" /> Profile & Settings
+                    </Link>
                     <button
                       type="button"
                       onClick={handleLogout}
@@ -242,44 +294,67 @@ export const LandingNavbar: React.FC = () => {
       {/* Mobile Collapsible Navigation Menu */}
       {isMobileMenuOpen && (
         <div className="md:hidden px-4 pb-4 pt-2 border-t border-[#DAD4C7]/60 bg-[#FFF9EE] space-y-2 animate-in slide-in-from-top-2 duration-150">
-          <a
-            href="#explore"
+          <Link
+            to="/"
             onClick={() => setIsMobileMenuOpen(false)}
-            className="block px-3 py-2 text-sm font-medium text-[#252525] rounded-xl hover:bg-black/5"
+            className="block w-full text-left px-3 py-2 text-sm font-medium text-[#252525] rounded-xl hover:bg-black/5"
           >
             Explore
-          </a>
-          <a
-            href="#top-destinations"
+          </Link>
+          <Link
+            to="/cities"
             onClick={() => setIsMobileMenuOpen(false)}
-            className="block px-3 py-2 text-sm font-medium text-[#6F6A60] rounded-xl hover:bg-black/5"
+            className="block w-full text-left px-3 py-2 text-sm font-medium text-[#252525] rounded-xl hover:bg-black/5"
           >
-            Destinations
-          </a>
-          <a
-            href="#previous-trips"
-            onClick={(e) => {
-              setIsMobileMenuOpen(false);
-              handleMyTripsClick(e);
-            }}
-            className="block px-3 py-2 text-sm font-medium text-[#6F6A60] rounded-xl hover:bg-black/5"
+            Explore Cities
+          </Link>
+          <Link
+            to="/activities"
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="block w-full text-left px-3 py-2 text-sm font-medium text-[#252525] rounded-xl hover:bg-black/5"
+          >
+            Explore Activities
+          </Link>
+          <button
+            type="button"
+            onClick={handleMyTripsNav}
+            className="w-full text-left px-3 py-2 text-sm font-medium text-[#6F6A60] rounded-xl hover:bg-black/5"
           >
             My Trips
-          </a>
-          {!currentUser && (
+          </button>
+          <button
+            type="button"
+            onClick={handlePlanTripClick}
+            className="w-full text-center py-2.5 text-xs font-bold text-[#252525] bg-[#F4C95D] hover:bg-[#E3B443] rounded-xl shadow-xs"
+          >
+            + Plan a New Trip
+          </button>
+          {!currentUser ? (
             <div className="pt-2 border-t border-[#DAD4C7]/60 flex gap-2">
               <Link
                 to="/login"
+                onClick={() => setIsMobileMenuOpen(false)}
                 className="flex-1 text-center py-2 text-xs font-semibold bg-white border border-[#DAD4C7] rounded-xl"
               >
                 Sign In
               </Link>
               <Link
                 to="/register"
+                onClick={() => setIsMobileMenuOpen(false)}
                 className="flex-1 text-center py-2 text-xs font-semibold bg-[#F4C95D] text-[#252525] rounded-xl"
               >
                 Register
               </Link>
+            </div>
+          ) : (
+            <div className="pt-2 border-t border-[#DAD4C7]/60">
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="w-full text-left px-3 py-2 text-xs font-semibold text-[#D96B43] hover:bg-[#FAECE7] rounded-xl flex items-center gap-2"
+              >
+                <LogOut className="w-4 h-4" /> Sign Out ({currentUser.firstName})
+              </button>
             </div>
           )}
         </div>

@@ -73,14 +73,14 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
         </form>
 
         {/* Quick Suggestion Chips */}
-        <div className="hidden sm:flex items-center gap-2 mt-4 text-xs text-white/80">
-          <span className="text-white/60">Popular:</span>
+        <div className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 mt-4 text-xs text-white/85">
+          <span className="text-white/70 text-[11px] sm:text-xs">Popular:</span>
           {['Paris', 'Tokyo', 'Amalfi Coast', 'Bali', 'Dubai'].map((city) => (
             <button
               key={city}
               type="button"
               onClick={() => onSearchChange(city)}
-              className="px-2.5 py-1 rounded-full bg-white/15 hover:bg-white/25 text-white backdrop-blur-xs transition-colors cursor-pointer flex items-center gap-1"
+              className="px-2.5 py-1 rounded-full bg-white/15 hover:bg-white/25 active:scale-95 text-white backdrop-blur-xs transition-all cursor-pointer flex items-center gap-1 text-[11px] sm:text-xs shadow-2xs"
             >
               <MapPin className="w-2.5 h-2.5 text-[#F4C95D]" /> {city}
             </button>

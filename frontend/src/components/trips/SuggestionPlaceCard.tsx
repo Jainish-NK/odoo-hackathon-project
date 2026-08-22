@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Star, MapPin, Plus, Check, Clock } from 'lucide-react';
 import { SuggestedPlace } from '../../types/trip';
 
@@ -13,6 +13,8 @@ export const SuggestionPlaceCard: React.FC<SuggestionPlaceCardProps> = ({
   isAdded,
   onToggleAdd,
 }) => {
+  const [imgSrc, setImgSrc] = useState(place.image);
+
   return (
     <div
       onClick={() => onToggleAdd(place.id)}
@@ -25,9 +27,10 @@ export const SuggestionPlaceCard: React.FC<SuggestionPlaceCardProps> = ({
       {/* Image thumbnail */}
       <div className="relative h-36 w-full overflow-hidden bg-[#EFE7D5]">
         <img
-          src={place.image}
+          src={imgSrc}
           alt={place.name}
           loading="lazy"
+          onError={() => setImgSrc('https://images.unsplash.com/photo-1502602898657-3e91760cbb34?q=80&w=800&auto=format&fit=crop')}
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
         <span className="absolute top-2.5 left-2.5 px-2.5 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-white text-[10px] font-semibold">

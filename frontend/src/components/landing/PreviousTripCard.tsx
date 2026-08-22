@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Calendar, MapPin, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { PreviousTrip } from '../../types/landing';
 import { useToast } from '../../context/ToastContext';
@@ -13,6 +13,7 @@ export const PreviousTripCard: React.FC<PreviousTripCardProps> = ({
   onViewTrip,
 }) => {
   const { showToast } = useToast();
+  const [imgSrc, setImgSrc] = useState(trip.image);
 
   const handleView = () => {
     if (onViewTrip) {
@@ -27,9 +28,10 @@ export const PreviousTripCard: React.FC<PreviousTripCardProps> = ({
       {/* Thumbnail */}
       <div className="relative w-full sm:w-48 h-40 sm:h-auto shrink-0 overflow-hidden bg-[#EFE7D5]">
         <img
-          src={trip.image}
+          src={imgSrc}
           alt={trip.title}
           loading="lazy"
+          onError={() => setImgSrc('https://images.unsplash.com/photo-1488646953014-85cb44e25828?q=80&w=800&auto=format&fit=crop')}
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
         <span className="absolute top-2.5 left-2.5 px-2.5 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-white text-[10px] font-semibold flex items-center gap-1">

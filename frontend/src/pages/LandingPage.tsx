@@ -9,9 +9,11 @@ import { SectionHeader } from '../components/landing/SectionHeader';
 import { Button } from '../components/ui/Button';
 import { mockDestinations, mockPreviousTrips } from '../data/landingData';
 import { Destination, FilterState, PreviousTrip } from '../types/landing';
+import { Trip } from '../types/trip';
 import { Plus, Compass, MapPin, ShieldCheck, Heart } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import { authService } from '../services/authService';
+import { tripService } from '../services/tripService';
 
 export const LandingPage: React.FC = () => {
   const navigate = useNavigate();
@@ -44,20 +46,32 @@ export const LandingPage: React.FC = () => {
     }
   };
 
-  // Load custom created trips from storage on mount
+  // Load custom created trips from service on mount
   useEffect(() => {
     try {
-      const stored = localStorage.getItem('globetrotter_user_trips');
-      if (stored) {
-        const parsed: PreviousTrip[] = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          // Merge unique user trips with default mock trips
-          const merged = [...parsed, ...mockPreviousTrips.filter((m) => !parsed.some((p) => p.id === m.id))];
-          setTrips(merged);
+      const user = authService.getCurrentUser();
+      if (user) {
+        const userTrips = tripService.getUserTrips(user.id);
+        if (userTrips.length > 0) {
+          const formatted: PreviousTrip[] = userTrips.map((t: Trip) => ({
+            id: t.id,
+            title: t.name,
+            destinationSummary: t.destinations.map((d) => d.city).join(', '),
+            startDate: new Date(t.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+            endDate: new Date(t.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+            destinationsCount: t.destinations.length,
+            durationDays: Math.max(1, Math.round((new Date(t.endDate).getTime() - new Date(t.startDate).getTime()) / (1000 * 60 * 60 * 24))),
+            image: t.destinations[0]?.image || 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?q=80&w=800&auto=format&fit=crop',
+            status: 'Upcoming',
+            budget: `₹${(t.totalBudget || 0).toLocaleString('en-IN')}`,
+          }));
+          setTrips(formatted);
+          return;
         }
       }
+      setTrips(mockPreviousTrips);
     } catch {
-      // fallback
+      setTrips(mockPreviousTrips);
     }
   }, []);
 

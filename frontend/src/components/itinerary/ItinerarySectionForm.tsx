@@ -69,8 +69,8 @@ export const ItinerarySectionForm: React.FC<ItinerarySectionFormProps> = ({
     type: 'activity',
     title: '',
     description: '',
-    startDate: tripStartISO,
-    endDate: tripStartISO,
+    startDate: tripStartISO || '',
+    endDate: tripStartISO || '',
     startTime: '',
     endTime: '',
     location: '',
@@ -88,44 +88,46 @@ export const ItinerarySectionForm: React.FC<ItinerarySectionFormProps> = ({
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Initialize or reset form state when modal opens or initialData changes
+  // Initialize or reset form state ONLY when modal is opened or target initialData changes
   useEffect(() => {
-    if (isOpen) {
-      setIsSubmitting(false);
-      if (initialData) {
-        setFormData({
-          type: initialData.type || 'activity',
-          title: initialData.title || '',
-          description: initialData.description || '',
-          startDate: normalizeToISODate(initialData.startDate) || tripStartISO,
-          endDate: normalizeToISODate(initialData.endDate) || tripStartISO,
-          startTime: initialData.startTime || '',
-          endTime: initialData.endTime || '',
-          location: initialData.location || '',
-          budget: String(initialData.budget ?? '0'),
-          notes: initialData.notes || '',
-        });
-      } else {
-        const defaultCity = trip.destinations && trip.destinations.length > 0
+    if (!isOpen) return;
+
+    setIsSubmitting(false);
+    setErrors({});
+
+    if (initialData) {
+      setFormData({
+        type: initialData.type || 'activity',
+        title: initialData.title || '',
+        description: initialData.description || '',
+        startDate: normalizeToISODate(initialData.startDate) || tripStartISO,
+        endDate: normalizeToISODate(initialData.endDate) || tripStartISO,
+        startTime: initialData.startTime || '',
+        endTime: initialData.endTime || '',
+        location: initialData.location || '',
+        budget: String(initialData.budget ?? '0'),
+        notes: initialData.notes || '',
+      });
+    } else {
+      const defaultCity =
+        trip.destinations && trip.destinations.length > 0
           ? `${trip.destinations[0].city}, ${trip.destinations[0].country}`
           : '';
 
-        setFormData({
-          type: 'activity',
-          title: '',
-          description: '',
-          startDate: tripStartISO,
-          endDate: tripStartISO,
-          startTime: '',
-          endTime: '',
-          location: defaultCity,
-          budget: '0',
-          notes: '',
-        });
-      }
-      setErrors({});
+      setFormData({
+        type: 'activity',
+        title: '',
+        description: '',
+        startDate: tripStartISO,
+        endDate: tripStartISO,
+        startTime: '',
+        endTime: '',
+        location: defaultCity,
+        budget: '0',
+        notes: '',
+      });
     }
-  }, [isOpen, initialData, trip, tripStartISO]);
+  }, [isOpen, initialData?.id, tripStartISO]);
 
   const validate = (): boolean => {
     const newErrors: typeof errors = {};
@@ -245,7 +247,8 @@ export const ItinerarySectionForm: React.FC<ItinerarySectionFormProps> = ({
           value={formData.title}
           error={errors.title}
           onChange={(e) => {
-            setFormData((prev) => ({ ...prev, title: e.target.value }));
+            const val = e.target.value;
+            setFormData((prev) => ({ ...prev, title: val }));
             if (errors.title) {
               setErrors((prev) => ({ ...prev, title: undefined }));
             }
@@ -259,7 +262,10 @@ export const ItinerarySectionForm: React.FC<ItinerarySectionFormProps> = ({
           placeholder="Add details, itinerary highlights, meeting locations, or confirmations..."
           rows={2}
           value={formData.description}
-          onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
+          onChange={(e) => {
+            const val = e.target.value;
+            setFormData((prev) => ({ ...prev, description: val }));
+          }}
         />
 
         {/* Date Range Row */}
@@ -285,7 +291,7 @@ export const ItinerarySectionForm: React.FC<ItinerarySectionFormProps> = ({
                   });
                   setErrors((prev) => ({ ...prev, startDate: undefined, endDate: undefined }));
                 }}
-                className={`w-full h-11 text-[13px] text-[#252525] bg-white/85 border rounded-xl pl-10 pr-3 focus:outline-none focus:bg-white transition-all ${
+                className={`w-full h-11 text-[13px] text-[#252525] bg-white/85 border rounded-xl pl-10 pr-3 focus:outline-none focus:bg-white transition-all cursor-pointer ${
                   errors.startDate
                     ? 'border-[#D96B43] focus:ring-2 focus:ring-[#D96B43]/20'
                     : 'border-[#DAD4C7] focus:border-[#E3B443] focus:ring-2 focus:ring-[#F4C95D]/20'
@@ -314,10 +320,11 @@ export const ItinerarySectionForm: React.FC<ItinerarySectionFormProps> = ({
                 max={tripEndISO || undefined}
                 value={formData.endDate}
                 onChange={(e) => {
-                  setFormData((prev) => ({ ...prev, endDate: e.target.value }));
+                  const newEnd = e.target.value;
+                  setFormData((prev) => ({ ...prev, endDate: newEnd }));
                   setErrors((prev) => ({ ...prev, endDate: undefined }));
                 }}
-                className={`w-full h-11 text-[13px] text-[#252525] bg-white/85 border rounded-xl pl-10 pr-3 focus:outline-none focus:bg-white transition-all ${
+                className={`w-full h-11 text-[13px] text-[#252525] bg-white/85 border rounded-xl pl-10 pr-3 focus:outline-none focus:bg-white transition-all cursor-pointer ${
                   errors.endDate
                     ? 'border-[#D96B43] focus:ring-2 focus:ring-[#D96B43]/20'
                     : 'border-[#DAD4C7] focus:border-[#E3B443] focus:ring-2 focus:ring-[#F4C95D]/20'
@@ -347,10 +354,11 @@ export const ItinerarySectionForm: React.FC<ItinerarySectionFormProps> = ({
                 type="time"
                 value={formData.startTime}
                 onChange={(e) => {
-                  setFormData((prev) => ({ ...prev, startTime: e.target.value }));
+                  const val = e.target.value;
+                  setFormData((prev) => ({ ...prev, startTime: val }));
                   setErrors((prev) => ({ ...prev, time: undefined }));
                 }}
-                className="w-full h-11 text-[13px] text-[#252525] bg-white/85 border border-[#DAD4C7] rounded-xl pl-10 pr-3 focus:outline-none focus:bg-white focus:border-[#E3B443] focus:ring-2 focus:ring-[#F4C95D]/20"
+                className="w-full h-11 text-[13px] text-[#252525] bg-white/85 border border-[#DAD4C7] rounded-xl pl-10 pr-3 focus:outline-none focus:bg-white focus:border-[#E3B443] focus:ring-2 focus:ring-[#F4C95D]/20 cursor-pointer"
               />
             </div>
           </div>
@@ -367,10 +375,11 @@ export const ItinerarySectionForm: React.FC<ItinerarySectionFormProps> = ({
                 type="time"
                 value={formData.endTime}
                 onChange={(e) => {
-                  setFormData((prev) => ({ ...prev, endTime: e.target.value }));
+                  const val = e.target.value;
+                  setFormData((prev) => ({ ...prev, endTime: val }));
                   setErrors((prev) => ({ ...prev, time: undefined }));
                 }}
-                className="w-full h-11 text-[13px] text-[#252525] bg-white/85 border border-[#DAD4C7] rounded-xl pl-10 pr-3 focus:outline-none focus:bg-white focus:border-[#E3B443] focus:ring-2 focus:ring-[#F4C95D]/20"
+                className="w-full h-11 text-[13px] text-[#252525] bg-white/85 border border-[#DAD4C7] rounded-xl pl-10 pr-3 focus:outline-none focus:bg-white focus:border-[#E3B443] focus:ring-2 focus:ring-[#F4C95D]/20 cursor-pointer"
               />
             </div>
           </div>
@@ -389,7 +398,10 @@ export const ItinerarySectionForm: React.FC<ItinerarySectionFormProps> = ({
             placeholder="e.g. Champ de Mars, Paris"
             leftIcon={<MapPin className="w-4 h-4" />}
             value={formData.location}
-            onChange={(e) => setFormData((prev) => ({ ...prev, location: e.target.value }))}
+            onChange={(e) => {
+              const val = e.target.value;
+              setFormData((prev) => ({ ...prev, location: val }));
+            }}
           />
 
           <Input
@@ -402,7 +414,8 @@ export const ItinerarySectionForm: React.FC<ItinerarySectionFormProps> = ({
             value={formData.budget}
             error={errors.budget}
             onChange={(e) => {
-              setFormData((prev) => ({ ...prev, budget: e.target.value }));
+              const val = e.target.value;
+              setFormData((prev) => ({ ...prev, budget: val }));
               if (errors.budget) {
                 setErrors((prev) => ({ ...prev, budget: undefined }));
               }
@@ -417,7 +430,10 @@ export const ItinerarySectionForm: React.FC<ItinerarySectionFormProps> = ({
           placeholder="e.g. Voucher code: GT-PARIS-2026, keep ID ready at gate..."
           rows={2}
           value={formData.notes}
-          onChange={(e) => setFormData((prev) => ({ ...prev, notes: e.target.value }))}
+          onChange={(e) => {
+            const val = e.target.value;
+            setFormData((prev) => ({ ...prev, notes: val }));
+          }}
         />
 
         {/* Action Buttons: Cancel and Save */}

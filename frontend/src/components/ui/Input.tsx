@@ -78,7 +78,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           />
 
           {rightIcon && (
-            <div className="absolute right-3.5 flex items-center text-[#8C867B]">
+            <div className="absolute right-3.5 flex items-center text-[#8C867B] pointer-events-none">
               {rightIcon}
             </div>
           )}

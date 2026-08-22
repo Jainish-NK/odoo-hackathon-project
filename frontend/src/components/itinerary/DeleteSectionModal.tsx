@@ -37,14 +37,15 @@ export const DeleteSectionModal: React.FC<DeleteSectionModalProps> = ({
           <Button type="button" variant="outline" size="md" onClick={onClose}>
             Cancel
           </Button>
-          <button
+          <Button
             type="button"
+            variant="danger"
+            size="md"
             onClick={onConfirm}
-            className="inline-flex items-center gap-1.5 px-4 h-11 text-sm font-semibold rounded-xl bg-[#D96B43] hover:bg-[#C25832] text-white shadow-xs transition-colors cursor-pointer"
+            leftIcon={<Trash2 className="w-4 h-4" />}
           >
-            <Trash2 className="w-4 h-4" />
-            <span>Delete Section</span>
-          </button>
+            Delete Section
+          </Button>
         </div>
       </div>
     </Modal>
