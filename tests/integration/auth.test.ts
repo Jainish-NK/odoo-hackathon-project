@@ -93,6 +93,28 @@ describe('Auth', () => {
       expect(res.body.error.code).toBe('UNAUTHORIZED');
     });
 
+    it('rejects a wrong password for a disabled account without revealing it is disabled', async () => {
+      const disabledEmail = `login-disabled.${Date.now()}@globetrotter.dev`;
+      await request(app)
+        .post('/api/v1/auth/register')
+        .send({ email: disabledEmail, password, name: 'Login Disabled User' });
+      await prisma.user.update({ where: { email: disabledEmail }, data: { isActive: false } });
+
+      const wrongPasswordRes = await request(app)
+        .post('/api/v1/auth/login')
+        .send({ email: disabledEmail, password: 'wrong-password' });
+
+      expect(wrongPasswordRes.status).toBe(401);
+      expect(wrongPasswordRes.body.error.code).toBe('UNAUTHORIZED');
+
+      const correctPasswordRes = await request(app)
+        .post('/api/v1/auth/login')
+        .send({ email: disabledEmail, password });
+
+      expect(correctPasswordRes.status).toBe(401);
+      expect(correctPasswordRes.body.error.code).toBe('ACCOUNT_DISABLED');
+    });
+
     it('rejects a login for an unknown email without leaking existence', async () => {
       const res = await request(app)
         .post('/api/v1/auth/login')

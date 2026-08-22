@@ -82,13 +82,17 @@ export const authService = {
       throw new UnauthorizedError('Invalid email or password');
     }
 
-    if (!user.isActive) {
-      throw new UnauthorizedError('This account has been disabled', 'ACCOUNT_DISABLED');
-    }
-
+    // Password is checked before the isActive gate so a wrong-password
+    // guess against a disabled account gets the same generic error as any
+    // other failed login — it must not reveal that the account is disabled
+    // (or that it exists at all) without proving the password first.
     const passwordMatches = await bcrypt.compare(input.password, user.passwordHash);
     if (!passwordMatches) {
       throw new UnauthorizedError('Invalid email or password');
+    }
+
+    if (!user.isActive) {
+      throw new UnauthorizedError('This account has been disabled', 'ACCOUNT_DISABLED');
     }
 
     return { user: toPublicUser(user), tokens: await issueTokens(user) };
