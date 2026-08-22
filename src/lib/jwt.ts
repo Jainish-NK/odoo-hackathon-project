@@ -1,5 +1,5 @@
-import jwt, { SignOptions } from 'jsonwebtoken';
 import { Role } from '@prisma/client';
+import jwt, { SignOptions } from 'jsonwebtoken';
 
 import { env } from '@/config/env';
 

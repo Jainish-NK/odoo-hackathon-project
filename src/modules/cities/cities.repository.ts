@@ -1,9 +1,9 @@
 import { Prisma } from '@prisma/client';
 
+import { ListCitiesQuery } from './cities.schema';
+
 import { prisma } from '@/lib/prisma';
 import { PaginationParams } from '@/utils/pagination';
-
-import { ListCitiesQuery } from './cities.schema';
 
 export const citiesRepository = {
   async list(query: ListCitiesQuery, pagination: PaginationParams) {

@@ -1,8 +1,8 @@
-import { NotFoundError, ValidationError } from '@/utils/errors';
-
-import { tripsService } from './trips.service';
 import { tripStopsRepository } from './trip-stops.repository';
 import { CreateStopInput, ReorderStopsInput, UpdateStopInput } from './trip-stops.schema';
+import { tripsService } from './trips.service';
+
+import { NotFoundError, ValidationError } from '@/utils/errors';
 
 async function assertStopBelongsToTrip(tripId: string, stopId: string) {
   const stop = await tripStopsRepository.findById(stopId);
@@ -58,7 +58,10 @@ export const tripStopsService = {
     const existingIds = new Set(existingStops.map((s) => s.id));
     const requestedIds = input.order.map((o) => o.stopId);
 
-    if (requestedIds.length !== existingStops.length || !requestedIds.every((id) => existingIds.has(id))) {
+    if (
+      requestedIds.length !== existingStops.length ||
+      !requestedIds.every((id) => existingIds.has(id))
+    ) {
       throw new ValidationError('order must include exactly the current stops of this trip');
     }
 

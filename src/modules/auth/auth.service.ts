@@ -3,13 +3,13 @@ import crypto from 'node:crypto';
 import { User } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
+import { authRepository } from './auth.repository';
+import { ForgotPasswordInput, LoginInput, RegisterInput, ResetPasswordInput } from './auth.schema';
+
 import { env } from '@/config/env';
 import { signAccessToken, signRefreshToken } from '@/lib/jwt';
 import { logger } from '@/lib/logger';
 import { ConflictError, UnauthorizedError, ValidationError } from '@/utils/errors';
-
-import { authRepository } from './auth.repository';
-import { ForgotPasswordInput, LoginInput, RegisterInput, ResetPasswordInput } from './auth.schema';
 
 export interface AuthTokens {
   accessToken: string;

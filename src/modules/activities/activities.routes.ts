@@ -1,10 +1,10 @@
 import { Router } from 'express';
 
-import { validate } from '@/middleware/validation.middleware';
-import { asyncHandler } from '@/utils/asyncHandler';
-
 import { activitiesController } from './activities.controller';
 import { activityIdParamSchema, listActivitiesQuerySchema } from './activities.schema';
+
+import { validate } from '@/middleware/validation.middleware';
+import { asyncHandler } from '@/utils/asyncHandler';
 
 const router = Router();
 
@@ -15,7 +15,11 @@ const router = Router();
  *     tags: [Activities]
  *     summary: Search/browse the activity catalog
  */
-router.get('/', validate({ query: listActivitiesQuerySchema }), asyncHandler(activitiesController.list));
+router.get(
+  '/',
+  validate({ query: listActivitiesQuerySchema }),
+  asyncHandler(activitiesController.list),
+);
 
 /**
  * @openapi

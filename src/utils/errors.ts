@@ -38,7 +38,11 @@ export class ForbiddenError extends AppError {
 
 export class NotFoundError extends AppError {
   constructor(resource = 'Resource', message?: string) {
-    super(404, `${resource.toUpperCase().replace(/\s+/g, '_')}_NOT_FOUND`, message ?? `${resource} not found`);
+    super(
+      404,
+      `${resource.toUpperCase().replace(/\s+/g, '_')}_NOT_FOUND`,
+      message ?? `${resource} not found`,
+    );
   }
 }
 

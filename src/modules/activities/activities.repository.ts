@@ -1,9 +1,9 @@
 import { Prisma } from '@prisma/client';
 
+import { ListActivitiesQuery } from './activities.schema';
+
 import { prisma } from '@/lib/prisma';
 import { PaginationParams } from '@/utils/pagination';
-
-import { ListActivitiesQuery } from './activities.schema';
 
 export const activitiesRepository = {
   async list(query: ListActivitiesQuery, pagination: PaginationParams) {

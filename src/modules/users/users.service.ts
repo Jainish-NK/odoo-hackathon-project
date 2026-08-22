@@ -1,9 +1,9 @@
 import { User } from '@prisma/client';
 
-import { ConflictError, NotFoundError } from '@/utils/errors';
-
 import { usersRepository } from './users.repository';
 import { UpdateProfileInput } from './users.schema';
+
+import { ConflictError, NotFoundError } from '@/utils/errors';
 
 type PublicUser = Omit<User, 'passwordHash'>;
 

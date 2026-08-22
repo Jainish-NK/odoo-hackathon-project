@@ -1,9 +1,9 @@
 import { Request, Response } from 'express';
 
-import { sendSuccess } from '@/utils/response';
-
-import { tripsService } from './trips.service';
 import { CreateTripInput, ListTripsQuery, UpdateTripInput } from './trips.schema';
+import { tripsService } from './trips.service';
+
+import { sendSuccess } from '@/utils/response';
 
 export const tripsController = {
   async create(req: Request<unknown, unknown, CreateTripInput>, res: Response): Promise<void> {
@@ -11,7 +11,10 @@ export const tripsController = {
     sendSuccess(res, trip, 201);
   },
 
-  async list(req: Request<unknown, unknown, unknown, ListTripsQuery>, res: Response): Promise<void> {
+  async list(
+    req: Request<unknown, unknown, unknown, ListTripsQuery>,
+    res: Response,
+  ): Promise<void> {
     const { items, meta } = await tripsService.listTrips(req.user!.id, req.query);
     sendSuccess(res, items, 200, meta);
   },
@@ -21,7 +24,10 @@ export const tripsController = {
     sendSuccess(res, trip);
   },
 
-  async update(req: Request<{ tripId: string }, unknown, UpdateTripInput>, res: Response): Promise<void> {
+  async update(
+    req: Request<{ tripId: string }, unknown, UpdateTripInput>,
+    res: Response,
+  ): Promise<void> {
     const trip = await tripsService.updateTrip(req.params.tripId, req.user!.id, req.body);
     sendSuccess(res, trip);
   },

@@ -1,9 +1,9 @@
 import { Request, Response } from 'express';
 
-import { sendSuccess } from '@/utils/response';
-
-import { tripStopsService } from './trip-stops.service';
 import { CreateStopInput, ReorderStopsInput, UpdateStopInput } from './trip-stops.schema';
+import { tripStopsService } from './trip-stops.service';
+
+import { sendSuccess } from '@/utils/response';
 
 export const tripStopsController = {
   async list(req: Request<{ tripId: string }>, res: Response): Promise<void> {
@@ -11,7 +11,10 @@ export const tripStopsController = {
     sendSuccess(res, stops);
   },
 
-  async create(req: Request<{ tripId: string }, unknown, CreateStopInput>, res: Response): Promise<void> {
+  async create(
+    req: Request<{ tripId: string }, unknown, CreateStopInput>,
+    res: Response,
+  ): Promise<void> {
     const stop = await tripStopsService.addStop(req.params.tripId, req.user!.id, req.body);
     sendSuccess(res, stop, 201);
   },
@@ -20,7 +23,12 @@ export const tripStopsController = {
     req: Request<{ tripId: string; stopId: string }, unknown, UpdateStopInput>,
     res: Response,
   ): Promise<void> {
-    const stop = await tripStopsService.updateStop(req.params.tripId, req.params.stopId, req.user!.id, req.body);
+    const stop = await tripStopsService.updateStop(
+      req.params.tripId,
+      req.params.stopId,
+      req.user!.id,
+      req.body,
+    );
     sendSuccess(res, stop);
   },
 
@@ -29,7 +37,10 @@ export const tripStopsController = {
     sendSuccess(res, { message: 'Stop deleted' });
   },
 
-  async reorder(req: Request<{ tripId: string }, unknown, ReorderStopsInput>, res: Response): Promise<void> {
+  async reorder(
+    req: Request<{ tripId: string }, unknown, ReorderStopsInput>,
+    res: Response,
+  ): Promise<void> {
     const stops = await tripStopsService.reorderStops(req.params.tripId, req.user!.id, req.body);
     sendSuccess(res, stops);
   },

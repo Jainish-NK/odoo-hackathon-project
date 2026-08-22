@@ -1,9 +1,9 @@
+import { citiesRepository } from './cities.repository';
+import { ListCitiesQuery } from './cities.schema';
+
 import { redisClient } from '@/lib/redis';
 import { NotFoundError } from '@/utils/errors';
 import { buildPaginationMeta, parsePagination } from '@/utils/pagination';
-
-import { citiesRepository } from './cities.repository';
-import { ListCitiesQuery } from './cities.schema';
 
 const LIST_CACHE_TTL_SECONDS = 120;
 const DETAIL_CACHE_TTL_SECONDS = 300;

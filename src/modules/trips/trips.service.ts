@@ -2,11 +2,11 @@ import crypto from 'node:crypto';
 
 import { Trip, TripStatus, TripVisibility } from '@prisma/client';
 
-import { ForbiddenError, NotFoundError } from '@/utils/errors';
-import { buildPaginationMeta, parsePagination, PaginationParams } from '@/utils/pagination';
-
 import { tripsRepository } from './trips.repository';
 import { CreateTripInput, ListTripsQuery, UpdateTripInput } from './trips.schema';
+
+import { ForbiddenError, NotFoundError } from '@/utils/errors';
+import { buildPaginationMeta, parsePagination, PaginationParams } from '@/utils/pagination';
 
 function generateShareSlug(name: string): string {
   const slugBase = name
@@ -38,12 +38,17 @@ export const tripsService = {
       coverImageUrl: input.coverImageUrl,
       startDate: input.startDate,
       endDate: input.endDate,
+      budgetAmount: input.budgetAmount,
     });
   },
 
   async listTrips(userId: string, query: ListTripsQuery) {
     const pagination: PaginationParams = parsePagination(query);
-    const { items, total } = await tripsRepository.listForUser(userId, pagination, query.status as TripStatus | undefined);
+    const { items, total } = await tripsRepository.listForUser(
+      userId,
+      pagination,
+      query.status as TripStatus | undefined,
+    );
     return { items, meta: buildPaginationMeta(pagination, total) };
   },
 

@@ -25,7 +25,9 @@ export const updateStopSchema = z
     endDate: z.coerce.date().optional(),
     position: z.number().int().min(0).optional(),
   })
-  .refine((data) => Object.keys(data).length > 0, { message: 'At least one field must be provided' })
+  .refine((data) => Object.keys(data).length > 0, {
+    message: 'At least one field must be provided',
+  })
   .refine((data) => !data.startDate || !data.endDate || data.endDate >= data.startDate, {
     message: 'endDate must be on or after startDate',
     path: ['endDate'],

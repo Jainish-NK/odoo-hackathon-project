@@ -1,8 +1,8 @@
-import { NotFoundError } from '@/utils/errors';
-import { buildPaginationMeta, parsePagination } from '@/utils/pagination';
-
 import { activitiesRepository } from './activities.repository';
 import { ListActivitiesQuery } from './activities.schema';
+
+import { NotFoundError } from '@/utils/errors';
+import { buildPaginationMeta, parsePagination } from '@/utils/pagination';
 
 export const activitiesService = {
   async listActivities(query: ListActivitiesQuery) {

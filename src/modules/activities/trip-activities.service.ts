@@ -1,8 +1,8 @@
-import { tripsService } from '@/modules/trips/trips.service';
-import { NotFoundError } from '@/utils/errors';
-
 import { tripActivitiesRepository } from './trip-activities.repository';
 import { AddTripActivityInput, UpdateTripActivityInput } from './trip-activities.schema';
+
+import { tripsService } from '@/modules/trips/trips.service';
+import { NotFoundError } from '@/utils/errors';
 
 async function assertTripActivityBelongsToTrip(tripId: string, tripActivityId: string) {
   const tripActivity = await tripActivitiesRepository.findById(tripActivityId);
@@ -34,7 +34,12 @@ export const tripActivitiesService = {
     });
   },
 
-  async updateActivity(tripId: string, tripActivityId: string, userId: string, input: UpdateTripActivityInput) {
+  async updateActivity(
+    tripId: string,
+    tripActivityId: string,
+    userId: string,
+    input: UpdateTripActivityInput,
+  ) {
     await tripsService.getOwnedTrip(tripId, userId);
     await assertTripActivityBelongsToTrip(tripId, tripActivityId);
 

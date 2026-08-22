@@ -1,18 +1,22 @@
 import { Router } from 'express';
 
+import { usersController } from './users.controller';
+import { cityIdParamSchema, saveDestinationSchema, updateProfileSchema } from './users.schema';
+
 import { authenticate } from '@/middleware/auth.middleware';
 import { validate } from '@/middleware/validation.middleware';
 import { asyncHandler } from '@/utils/asyncHandler';
-
-import { usersController } from './users.controller';
-import { cityIdParamSchema, saveDestinationSchema, updateProfileSchema } from './users.schema';
 
 const router = Router();
 
 router.use(authenticate);
 
 router.get('/me', asyncHandler(usersController.getMe));
-router.patch('/me', validate({ body: updateProfileSchema }), asyncHandler(usersController.updateMe));
+router.patch(
+  '/me',
+  validate({ body: updateProfileSchema }),
+  asyncHandler(usersController.updateMe),
+);
 router.delete('/me', asyncHandler(usersController.deleteMe));
 
 router.get('/me/saved-destinations', asyncHandler(usersController.listSavedDestinations));

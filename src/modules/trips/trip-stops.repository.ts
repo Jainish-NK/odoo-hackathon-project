@@ -36,7 +36,10 @@ export const tripStopsRepository = {
     return prisma.tripStop.delete({ where: { id: stopId } });
   },
 
-  async reorder(tripId: string, order: { stopId: string; position: number }[]): Promise<TripStop[]> {
+  async reorder(
+    tripId: string,
+    order: { stopId: string; position: number }[],
+  ): Promise<TripStop[]> {
     return prisma.$transaction(
       order.map(({ stopId, position }) =>
         prisma.tripStop.update({

@@ -1,9 +1,9 @@
 import { Request, Response } from 'express';
 
-import { sendSuccess } from '@/utils/response';
-
-import { usersService } from './users.service';
 import { SaveDestinationInput, UpdateProfileInput } from './users.schema';
+import { usersService } from './users.service';
+
+import { sendSuccess } from '@/utils/response';
 
 export const usersController = {
   async getMe(req: Request, res: Response): Promise<void> {
@@ -26,7 +26,10 @@ export const usersController = {
     sendSuccess(res, cities);
   },
 
-  async saveDestination(req: Request<unknown, unknown, SaveDestinationInput>, res: Response): Promise<void> {
+  async saveDestination(
+    req: Request<unknown, unknown, SaveDestinationInput>,
+    res: Response,
+  ): Promise<void> {
     const city = await usersService.saveDestination(req.user!.id, req.body.cityId);
     sendSuccess(res, city, 201);
   },

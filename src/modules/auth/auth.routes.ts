@@ -1,11 +1,16 @@
 import { Router } from 'express';
 
+import { authController } from './auth.controller';
+import {
+  forgotPasswordSchema,
+  loginSchema,
+  registerSchema,
+  resetPasswordSchema,
+} from './auth.schema';
+
 import { authRateLimiter } from '@/middleware/rate-limit.middleware';
 import { validate } from '@/middleware/validation.middleware';
 import { asyncHandler } from '@/utils/asyncHandler';
-
-import { authController } from './auth.controller';
-import { forgotPasswordSchema, loginSchema, registerSchema, resetPasswordSchema } from './auth.schema';
 
 const router = Router();
 
@@ -49,6 +54,10 @@ router.post(
  *     tags: [Auth]
  *     summary: Reset password using a valid reset token
  */
-router.post('/reset-password', validate({ body: resetPasswordSchema }), asyncHandler(authController.resetPassword));
+router.post(
+  '/reset-password',
+  validate({ body: resetPasswordSchema }),
+  asyncHandler(authController.resetPassword),
+);
 
 export default router;

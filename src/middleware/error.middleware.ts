@@ -11,7 +11,12 @@ import { sendError } from '@/utils/response';
  * Never leaks stack traces, database internals, password hashes, or secrets.
  */
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function errorMiddleware(err: unknown, req: Request, res: Response, _next: NextFunction): void {
+export function errorMiddleware(
+  err: unknown,
+  req: Request,
+  res: Response,
+  _next: NextFunction,
+): void {
   if (err instanceof AppError) {
     if (err.statusCode >= 500) {
       logger.error({ err, path: req.path, method: req.method }, err.message);
@@ -45,11 +50,23 @@ function mapPrismaError(err: Prisma.PrismaClientKnownRequestError): {
 } {
   switch (err.code) {
     case 'P2002':
-      return { statusCode: 409, code: 'UNIQUE_CONSTRAINT_VIOLATION', message: 'A record with these values already exists' };
+      return {
+        statusCode: 409,
+        code: 'UNIQUE_CONSTRAINT_VIOLATION',
+        message: 'A record with these values already exists',
+      };
     case 'P2025':
-      return { statusCode: 404, code: 'RECORD_NOT_FOUND', message: 'The requested record was not found' };
+      return {
+        statusCode: 404,
+        code: 'RECORD_NOT_FOUND',
+        message: 'The requested record was not found',
+      };
     case 'P2003':
-      return { statusCode: 409, code: 'FOREIGN_KEY_CONSTRAINT_VIOLATION', message: 'Related record does not exist' };
+      return {
+        statusCode: 409,
+        code: 'FOREIGN_KEY_CONSTRAINT_VIOLATION',
+        message: 'Related record does not exist',
+      };
     default:
       return { statusCode: 500, code: 'DATABASE_ERROR', message: 'A database error occurred' };
   }

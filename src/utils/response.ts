@@ -3,7 +3,7 @@ import { Response } from 'express';
 export interface SuccessResponseBody<T> {
   success: true;
   data: T;
-  meta?: Record<string, unknown>;
+  meta?: object;
 }
 
 export interface ErrorResponseBody {
@@ -19,7 +19,7 @@ export function sendSuccess<T>(
   res: Response,
   data: T,
   statusCode = 200,
-  meta?: Record<string, unknown>,
+  meta?: object,
 ): Response<SuccessResponseBody<T>> {
   const body: SuccessResponseBody<T> = { success: true, data };
   if (meta) body.meta = meta;

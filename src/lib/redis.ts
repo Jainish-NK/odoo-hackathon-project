@@ -76,7 +76,11 @@ class RedisClient {
     }
   }
 
-  async setJson(key: string, value: unknown, ttlSeconds: number = redisConfig.defaultTtlSeconds): Promise<void> {
+  async setJson(
+    key: string,
+    value: unknown,
+    ttlSeconds: number = redisConfig.defaultTtlSeconds,
+  ): Promise<void> {
     await this.set(key, JSON.stringify(value), ttlSeconds);
   }
 
@@ -85,7 +89,10 @@ class RedisClient {
   }
 
   async deleteByPrefix(prefix: string): Promise<void> {
-    const stream = this.client.scanStream({ match: `${redisConfig.keyPrefix}${prefix}*`, count: 100 });
+    const stream = this.client.scanStream({
+      match: `${redisConfig.keyPrefix}${prefix}*`,
+      count: 100,
+    });
     const pipeline = this.client.pipeline();
     let hasKeys = false;
 

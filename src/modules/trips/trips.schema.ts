@@ -12,6 +12,7 @@ export const createTripSchema = z
     coverImageUrl: z.string().url().max(2048).optional(),
     startDate: z.coerce.date(),
     endDate: z.coerce.date(),
+    budgetAmount: z.number().min(0).optional(),
   })
   .refine((data) => data.endDate >= data.startDate, {
     message: 'endDate must be on or after startDate',
@@ -28,8 +29,11 @@ export const updateTripSchema = z
     endDate: z.coerce.date().optional(),
     status: z.nativeEnum(TripStatus).optional(),
     visibility: z.nativeEnum(TripVisibility).optional(),
+    budgetAmount: z.number().min(0).nullable().optional(),
   })
-  .refine((data) => Object.keys(data).length > 0, { message: 'At least one field must be provided' })
+  .refine((data) => Object.keys(data).length > 0, {
+    message: 'At least one field must be provided',
+  })
   .refine((data) => !data.startDate || !data.endDate || data.endDate >= data.startDate, {
     message: 'endDate must be on or after startDate',
     path: ['endDate'],

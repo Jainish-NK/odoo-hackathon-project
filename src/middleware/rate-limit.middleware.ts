@@ -16,7 +16,11 @@ export function createRateLimiter(overrides: Partial<Options> = {}) {
     standardHeaders: true,
     legacyHeaders: false,
     store: new RedisStore({
-      sendCommand: (...args: string[]) => redisClient.raw.call(...args) as Promise<never>,
+      // ioredis' `call` overloads type their rest args as a fixed tuple, which is
+      // fundamentally incompatible with the string[] signature rate-limit-redis
+      // requires here — this cast is the documented workaround for that mismatch.
+      sendCommand: (...args: string[]) =>
+        (redisClient.raw.call as unknown as (...args: string[]) => Promise<never>)(...args),
       prefix: 'rl:',
     }),
     handler: (_req, res) => {

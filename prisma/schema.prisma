@@ -133,6 +133,7 @@ model Trip {
   endDate       DateTime
   status        TripStatus     @default(DRAFT)
   visibility    TripVisibility @default(PRIVATE)
+  budgetAmount  Decimal?       @db.Decimal(10, 2)
   shareSlug     String?        @unique
   copiedFromId  String?
   createdAt     DateTime       @default(now())
