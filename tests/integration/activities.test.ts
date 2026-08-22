@@ -96,9 +96,7 @@ describe('Activities', () => {
     });
 
     it('returns 404 for a nonexistent activity', async () => {
-      const res = await request(app).get(
-        '/api/v1/activities/00000000-0000-0000-0000-000000000000',
-      );
+      const res = await request(app).get('/api/v1/activities/00000000-0000-0000-0000-000000000000');
       expect(res.status).toBe(404);
     });
   });

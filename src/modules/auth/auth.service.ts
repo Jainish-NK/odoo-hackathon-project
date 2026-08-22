@@ -183,8 +183,7 @@ export const authService = {
     }
 
     const passwordHash = await bcrypt.hash(input.password, env.BCRYPT_SALT_ROUNDS);
-    await authRepository.updateUserPassword(resetToken.userId, passwordHash);
-    await authRepository.markResetTokenUsed(resetToken.id);
+    await authRepository.resetPasswordWithToken(resetToken.userId, passwordHash, resetToken.id);
     await tokenStore.revokeAllRefreshSessions(resetToken.userId);
   },
 };

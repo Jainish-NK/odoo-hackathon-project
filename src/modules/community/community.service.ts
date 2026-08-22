@@ -38,12 +38,7 @@ export const communityService = {
     const cached = await redisClient.getJson<{ items: unknown[]; total: number }>(cacheKey);
     const { items, total } =
       cached ??
-      (await communityRepository.listPublicTrips(
-        pagination,
-        query.search,
-        query.city,
-        query.sort,
-      ));
+      (await communityRepository.listPublicTrips(pagination, query.search, query.city, query.sort));
 
     if (!cached) {
       await redisClient.setJson(cacheKey, { items, total }, LIST_CACHE_TTL_SECONDS);

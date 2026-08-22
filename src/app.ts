@@ -23,7 +23,12 @@ export function createApp(): Express {
   app.set('trust proxy', 1);
 
   app.use(helmet());
-  app.use(cors({ origin: env.CORS_ORIGIN, credentials: true }));
+  // `Access-Control-Allow-Credentials: true` together with a wildcard origin
+  // is invalid per the CORS spec and browsers refuse it outright — only
+  // send it when a specific origin is actually configured. The API itself
+  // never relies on cookies (auth is Bearer-token only), so this only
+  // matters for frontends that happen to fetch with credentials: 'include'.
+  app.use(cors({ origin: env.CORS_ORIGIN, credentials: env.CORS_ORIGIN !== '*' }));
   app.use(compression());
   app.use(express.json({ limit: '1mb' }));
   app.use(express.urlencoded({ extended: true, limit: '1mb' }));

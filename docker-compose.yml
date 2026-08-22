@@ -56,6 +56,14 @@ services:
     volumes:
       - ./src:/usr/src/app/src
       - ./prisma:/usr/src/app/prisma
+    healthcheck:
+      # busybox wget ships in the node:alpine base image, so no extra
+      # package install is needed just for the healthcheck.
+      test: ['CMD', 'wget', '--no-verbose', '--tries=1', '--spider', 'http://localhost:4000/health']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
     networks:
       - globetrotter-network
 
