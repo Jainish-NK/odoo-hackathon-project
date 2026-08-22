@@ -5,6 +5,7 @@ import adminRoutes from '@/modules/admin/admin.routes';
 import authRoutes from '@/modules/auth/auth.routes';
 import citiesRoutes from '@/modules/cities/cities.routes';
 import communityRoutes from '@/modules/community/community.routes';
+import publicRoutes from '@/modules/community/public.routes';
 import tripsRoutes from '@/modules/trips/trips.routes';
 import usersRoutes from '@/modules/users/users.routes';
 
@@ -22,6 +23,7 @@ router.use('/cities', citiesRoutes);
 router.use('/activities', activitiesRoutes);
 router.use('/trips', tripsRoutes);
 router.use('/community', communityRoutes);
+router.use('/public', publicRoutes);
 router.use('/admin', adminRoutes);
 
 export default router;

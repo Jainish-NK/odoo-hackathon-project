@@ -13,6 +13,7 @@ import {
   listTripsQuerySchema,
   tripIdParamSchema,
   updateTripSchema,
+  updateVisibilitySchema,
 } from './trips.schema';
 
 import { authenticate } from '@/middleware/auth.middleware';
@@ -68,6 +69,20 @@ router.delete(
   '/:tripId',
   validate({ params: tripIdParamSchema }),
   asyncHandler(tripsController.remove),
+);
+
+/**
+ * @openapi
+ * /trips/{tripId}/visibility:
+ *   patch:
+ *     tags: [Trips]
+ *     summary: Toggle a trip's visibility (PRIVATE/PUBLIC) without resending the rest of the trip
+ *     security: [{ bearerAuth: [] }]
+ */
+router.patch(
+  '/:tripId/visibility',
+  validate({ params: tripIdParamSchema, body: updateVisibilitySchema }),
+  asyncHandler(tripsController.updateVisibility),
 );
 
 // Nested resource trees composed from their own modules, keeping this file

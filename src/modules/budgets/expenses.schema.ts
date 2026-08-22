@@ -15,6 +15,7 @@ export const createExpenseSchema = z.object({
   description: z.string().trim().max(500).optional(),
   amount: z.number().positive('amount must be greater than 0'),
   date: z.coerce.date(),
+  tripStopId: z.string().uuid('Invalid stop id').optional(),
 });
 export type CreateExpenseInput = z.infer<typeof createExpenseSchema>;
 
@@ -24,6 +25,7 @@ export const updateExpenseSchema = z
     description: z.string().trim().max(500).nullable().optional(),
     amount: z.number().positive().optional(),
     date: z.coerce.date().optional(),
+    tripStopId: z.string().uuid('Invalid stop id').nullable().optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: 'At least one field must be provided',

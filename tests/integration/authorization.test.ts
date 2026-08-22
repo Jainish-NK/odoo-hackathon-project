@@ -73,6 +73,26 @@ describe('Authorization (RBAC)', () => {
     });
   });
 
+  describe('GET /api/v1/admin/trips', () => {
+    it('rejects a normal (non-admin) user', async () => {
+      const res = await request(app)
+        .get('/api/v1/admin/trips')
+        .set('Authorization', `Bearer ${userToken}`);
+
+      expect(res.status).toBe(403);
+    });
+
+    it('allows an admin user', async () => {
+      const res = await request(app)
+        .get('/api/v1/admin/trips')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(Array.isArray(res.body.data)).toBe(true);
+      expect(res.body.meta).toHaveProperty('total');
+    });
+  });
+
   describe('GET /api/v1/admin/analytics', () => {
     it('rejects a normal user', async () => {
       const res = await request(app)
@@ -82,12 +102,25 @@ describe('Authorization (RBAC)', () => {
       expect(res.status).toBe(403);
     });
 
-    it('allows an admin user', async () => {
+    it('allows an admin user and returns aggregate stats computed in the database', async () => {
       const res = await request(app)
         .get('/api/v1/admin/analytics')
         .set('Authorization', `Bearer ${adminToken}`);
 
       expect(res.status).toBe(200);
+      expect(res.body.data.totals).toMatchObject({
+        users: expect.any(Number),
+        trips: expect.any(Number),
+        publicTrips: expect.any(Number),
+      });
+      expect(res.body.data.engagement).toMatchObject({
+        tripsCreatedLast30Days: expect.any(Number),
+        activeUsersLast30Days: expect.any(Number),
+      });
+      expect(Array.isArray(res.body.data.tripsByStatus)).toBe(true);
+      expect(Array.isArray(res.body.data.popularCities)).toBe(true);
+      expect(Array.isArray(res.body.data.popularActivities)).toBe(true);
+      expect(res.body.data.totals.users).toBeGreaterThan(0);
     });
   });
 

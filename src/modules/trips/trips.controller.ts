@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 
-import { CreateTripInput, ListTripsQuery, UpdateTripInput } from './trips.schema';
+import { CreateTripInput, ListTripsQuery, UpdateTripInput, UpdateVisibilityInput } from './trips.schema';
 import { tripsService } from './trips.service';
 
 import { sendSuccess } from '@/utils/response';
@@ -35,5 +35,17 @@ export const tripsController = {
   async remove(req: Request<{ tripId: string }>, res: Response): Promise<void> {
     await tripsService.deleteTrip(req.params.tripId, req.user!.id);
     sendSuccess(res, { message: 'Trip deleted' });
+  },
+
+  async updateVisibility(
+    req: Request<{ tripId: string }, unknown, UpdateVisibilityInput>,
+    res: Response,
+  ): Promise<void> {
+    const trip = await tripsService.setVisibility(
+      req.params.tripId,
+      req.user!.id,
+      req.body.visibility,
+    );
+    sendSuccess(res, trip);
   },
 };

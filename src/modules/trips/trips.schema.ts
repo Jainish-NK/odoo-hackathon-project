@@ -54,6 +54,11 @@ const TRIP_SORT_VALUES = [
   '-name',
 ] as const;
 
+export const updateVisibilitySchema = z.object({
+  visibility: z.nativeEnum(TripVisibility),
+});
+export type UpdateVisibilityInput = z.infer<typeof updateVisibilitySchema>;
+
 export const listTripsQuerySchema = z.object({
   page: z.coerce.number().int().positive().optional(),
   limit: z.coerce.number().int().positive().optional(),

@@ -5,6 +5,7 @@ import { Trip, TripStatus, TripVisibility } from '@prisma/client';
 import { tripsRepository } from './trips.repository';
 import { CreateTripInput, ListTripsQuery, UpdateTripInput } from './trips.schema';
 
+import { communityService } from '@/modules/community/community.service';
 import { ForbiddenError, NotFoundError } from '@/utils/errors';
 import { buildPaginationMeta, parsePagination, PaginationParams } from '@/utils/pagination';
 
@@ -70,11 +71,24 @@ export const tripsService = {
       data.shareSlug = generateShareSlug(trip.name);
     }
 
-    return tripsRepository.update(tripId, data);
+    const updated = await tripsRepository.update(tripId, data);
+    await communityService.invalidateTripCache(tripId, updated.shareSlug);
+    return updated;
+  },
+
+  /**
+   * Dedicated visibility toggle, separate from the general update endpoint,
+   * for clients that only want to flip public/private without resending
+   * the rest of the trip. Shares the same shareSlug-generation rule as
+   * updateTrip so a trip only ever gets one share link, generated once.
+   */
+  async setVisibility(tripId: string, userId: string, visibility: TripVisibility) {
+    return this.updateTrip(tripId, userId, { visibility });
   },
 
   async deleteTrip(tripId: string, userId: string): Promise<void> {
-    await this.getOwnedTrip(tripId, userId);
+    const trip = await this.getOwnedTrip(tripId, userId);
     await tripsRepository.delete(tripId);
+    await communityService.invalidateTripCache(tripId, trip.shareSlug);
   },
 };

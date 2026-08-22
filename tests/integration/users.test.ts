@@ -198,5 +198,53 @@ describe('Users', () => {
       const found = await prisma.user.findUnique({ where: { email } });
       expect(found).toBeNull();
     });
+
+    it('cascades through trips, stops, activities, and expenses without leaving orphans', async () => {
+      const email = `users.cascade.${Date.now()}@globetrotter.dev`;
+      const regRes = await request(app)
+        .post('/api/v1/auth/register')
+        .send({ email, password, name: 'Cascade Tester' });
+      const token = regRes.body.data.tokens.accessToken;
+
+      const tripRes = await request(app)
+        .post('/api/v1/trips')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ name: 'Cascade Trip', startDate: '2026-09-01', endDate: '2026-09-05' });
+      const tripId = tripRes.body.data.id;
+
+      const stopRes = await request(app)
+        .post(`/api/v1/trips/${tripId}/stops`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ cityId, startDate: '2026-09-01', endDate: '2026-09-05' });
+      const stopId = stopRes.body.data.id;
+
+      const activityRow = await prisma.activity.create({
+        data: { cityId, name: `Cascade Activity ${Date.now()}`, category: 'SIGHTSEEING', cost: 10 },
+      });
+      const tripActivityRes = await request(app)
+        .post(`/api/v1/trips/${tripId}/activities`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ stopId, activityId: activityRow.id, date: '2026-09-02' });
+
+      await request(app)
+        .post(`/api/v1/trips/${tripId}/expenses`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ category: 'MEALS', amount: 20, date: '2026-09-02', tripStopId: stopId });
+
+      await request(app).delete('/api/v1/users/me').set('Authorization', `Bearer ${token}`);
+
+      expect(await prisma.user.findUnique({ where: { email } })).toBeNull();
+      expect(await prisma.trip.findUnique({ where: { id: tripId } })).toBeNull();
+      expect(await prisma.tripStop.findUnique({ where: { id: stopId } })).toBeNull();
+      expect(
+        await prisma.tripActivity.findUnique({ where: { id: tripActivityRes.body.data.id } }),
+      ).toBeNull();
+      expect(await prisma.expense.findFirst({ where: { tripId } })).toBeNull();
+      // the city and catalog activity are shared reference data, not
+      // owned by the user, so they must survive account deletion.
+      expect(await prisma.city.findUnique({ where: { id: cityId } })).not.toBeNull();
+
+      await prisma.activity.deleteMany({ where: { id: activityRow.id } });
+    });
   });
 });

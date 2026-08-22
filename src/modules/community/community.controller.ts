@@ -18,4 +18,9 @@ export const communityController = {
     const trip = await communityService.getPublicTrip(req.params.tripId);
     sendSuccess(res, trip);
   },
+
+  async getByShareSlug(req: Request<{ shareSlug: string }>, res: Response): Promise<void> {
+    const trip = await communityService.getPublicTripByShareSlug(req.params.shareSlug);
+    sendSuccess(res, trip);
+  },
 };

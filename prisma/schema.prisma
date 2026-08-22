@@ -170,6 +170,7 @@ model TripStop {
   trip           Trip           @relation(fields: [tripId], references: [id], onDelete: Cascade)
   city           City           @relation(fields: [cityId], references: [id], onDelete: Restrict)
   tripActivities TripActivity[]
+  expenses       Expense[]
 
   @@index([tripId, position])
   @@index([cityId])
@@ -234,6 +235,7 @@ model TripActivity {
 model Expense {
   id          String          @id @default(uuid())
   tripId      String
+  tripStopId  String?
   category    ExpenseCategory
   description String?
   amount      Decimal         @db.Decimal(10, 2)
@@ -241,10 +243,12 @@ model Expense {
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
 
-  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  trip     Trip      @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  tripStop TripStop? @relation(fields: [tripStopId], references: [id], onDelete: SetNull)
 
   @@index([tripId])
   @@index([tripId, category])
+  @@index([tripStopId])
   @@map("expenses")
 }
 

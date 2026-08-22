@@ -10,6 +10,11 @@ async function assertExpenseBelongsToTrip(tripId: string, expenseId: string) {
   return expense;
 }
 
+async function assertStopBelongsToTrip(tripId: string, stopId: string): Promise<void> {
+  const stop = await expensesRepository.findStopInTrip(tripId, stopId);
+  if (!stop) throw new NotFoundError('Trip stop');
+}
+
 export const expensesService = {
   async listExpenses(tripId: string, userId: string) {
     await tripsService.getOwnedTrip(tripId, userId);
@@ -18,6 +23,9 @@ export const expensesService = {
 
   async addExpense(tripId: string, userId: string, input: CreateExpenseInput) {
     await tripsService.getOwnedTrip(tripId, userId);
+    if (input.tripStopId) {
+      await assertStopBelongsToTrip(tripId, input.tripStopId);
+    }
     return expensesRepository.create({ tripId, ...input });
   },
 
@@ -29,6 +37,9 @@ export const expensesService = {
   ) {
     await tripsService.getOwnedTrip(tripId, userId);
     await assertExpenseBelongsToTrip(tripId, expenseId);
+    if (input.tripStopId) {
+      await assertStopBelongsToTrip(tripId, input.tripStopId);
+    }
     return expensesRepository.update(expenseId, input);
   },
 

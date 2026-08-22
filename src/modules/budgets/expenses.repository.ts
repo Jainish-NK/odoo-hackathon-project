@@ -11,11 +11,15 @@ export const expensesRepository = {
     return prisma.expense.findUnique({ where: { id: expenseId } });
   },
 
+  findStopInTrip(tripId: string, stopId: string) {
+    return prisma.tripStop.findFirst({ where: { id: stopId, tripId }, select: { id: true } });
+  },
+
   create(data: Prisma.ExpenseUncheckedCreateInput) {
     return prisma.expense.create({ data });
   },
 
-  update(expenseId: string, data: Prisma.ExpenseUpdateInput) {
+  update(expenseId: string, data: Prisma.ExpenseUncheckedUpdateInput) {
     return prisma.expense.update({ where: { id: expenseId }, data });
   },
 
