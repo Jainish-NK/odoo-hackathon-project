@@ -19,13 +19,22 @@ process.on('uncaughtException', (err) => {
 });
 
 async function bootstrap(): Promise<void> {
-  await connectDatabase();
-  logger.info('PostgreSQL connected');
+  try {
+    await connectDatabase();
+    logger.info('PostgreSQL connected');
+  } catch (err) {
+    logger.error({ err }, 'PostgreSQL connection failed at startup');
+    // Still allow process to boot so health endpoint can report degraded status
+  }
 
-  await redisClient.connect();
+  try {
+    await redisClient.connect();
+  } catch (err) {
+    logger.warn({ err }, 'Redis connection failed at startup; running in degraded cache mode');
+  }
 
   const app = createApp();
-  const server = app.listen(env.PORT, () => {
+  const server = app.listen(env.PORT, '0.0.0.0', () => {
     logger.info(`GlobeTrotter API listening on port ${env.PORT} (${env.NODE_ENV})`);
     logger.info(`API base path: ${env.API_PREFIX}`);
   });
