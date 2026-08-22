@@ -15,9 +15,13 @@ class RedisClient {
   constructor() {
     this.client = new Redis(redisConfig.url, {
       keyPrefix: redisConfig.keyPrefix,
-      maxRetriesPerRequest: 3,
+      maxRetriesPerRequest: 0,
+      enableOfflineQueue: false,
       lazyConnect: true,
-      retryStrategy: (times) => Math.min(times * 200, 2000),
+      retryStrategy: (times) => {
+        if (times > 2) return null; // stop reconnect spam when redis is not running
+        return Math.min(times * 300, 1000);
+      },
     });
 
     this.client.on('connect', () => {
@@ -27,7 +31,7 @@ class RedisClient {
 
     this.client.on('error', (err) => {
       this.connected = false;
-      logger.error({ err }, 'Redis error');
+      logger.warn({ err: err.message }, 'Redis offline, running in degraded cache mode');
     });
 
     this.client.on('close', () => {
