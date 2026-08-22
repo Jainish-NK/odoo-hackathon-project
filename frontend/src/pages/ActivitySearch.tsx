@@ -14,6 +14,7 @@ import { ActiveFilterChips, FilterChip } from '../components/discovery/ActiveFil
 import { ActivityCard } from '../components/discovery/ActivityCard';
 import { ActivityDetailsModal } from '../components/discovery/ActivityDetailsModal';
 import { AddToTripModal } from '../components/discovery/AddToTripModal';
+import { Footer } from '../components/ui/Footer';
 import { Button } from '../components/ui/Button';
 import { allActivitiesList } from '../data/tripSuggestions';
 import { ActivityItem, ActivityFilterState, ActivityGroupByOption, ActivitySortOption, Trip } from '../types/trip';
@@ -583,10 +584,8 @@ export const ActivitySearch: React.FC = () => {
         }}
       />
 
-      {/* Footer */}
-      <footer className="border-t border-[#DAD4C7]/80 bg-[#FFF9EE]/80 backdrop-blur-md mt-16 py-6 px-4 sm:px-8 text-center text-xs text-[#8C867B]">
-        GlobeTrotter Personalized Travel Planning Platform • Experiences & Activities Catalog
-      </footer>
+      {/* Universal Footer */}
+      <Footer />
     </div>
   );
 };

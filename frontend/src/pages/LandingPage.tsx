@@ -1,16 +1,30 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { LandingNavbar } from '../components/landing/LandingNavbar';
 import { HeroBanner } from '../components/landing/HeroBanner';
 import { FilterToolbar } from '../components/landing/FilterToolbar';
 import { DestinationCard } from '../components/landing/DestinationCard';
 import { PreviousTripCard } from '../components/landing/PreviousTripCard';
 import { SectionHeader } from '../components/landing/SectionHeader';
+import { Footer } from '../components/ui/Footer';
 import { Button } from '../components/ui/Button';
+import { CityDetailsModal } from '../components/discovery/CityDetailsModal';
+import { AddToTripModal } from '../components/discovery/AddToTripModal';
 import { mockDestinations, mockPreviousTrips } from '../data/landingData';
+import { allActivitiesList } from '../data/tripSuggestions';
 import { Destination, FilterState, PreviousTrip } from '../types/landing';
-import { Trip } from '../types/trip';
-import { Plus, Compass, MapPin, ShieldCheck, Heart } from 'lucide-react';
+import { Trip, ActivityItem } from '../types/trip';
+import {
+  Plus,
+  Compass,
+  MapPin,
+  Calendar,
+  Wallet,
+  Users,
+  ArrowRight,
+  Sparkles,
+  Quote,
+} from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 import { authService } from '../services/authService';
 import { tripService } from '../services/tripService';
@@ -22,29 +36,13 @@ export const LandingPage: React.FC = () => {
   const [destinations] = useState<Destination[]>(mockDestinations);
   const [trips, setTrips] = useState<PreviousTrip[]>(mockPreviousTrips);
 
-  const handlePlanTrip = () => {
-    if (authService.getCurrentUser()) {
-      navigate('/trips/create');
-    } else {
-      showToast(
-        'info',
-        'Sign In Required',
-        'Please sign in or register to create and customize your trip.'
-      );
-      navigate('/login?redirect=/trips/create', { state: { from: '/trips/create' } });
-    }
-  };
-
-  const handleViewTrip = (selectedTrip: PreviousTrip) => {
-    if (authService.getCurrentUser()) {
-      navigate(`/trips/${selectedTrip.id}/itinerary`);
-    } else {
-      showToast('info', 'Sign In Required', 'Please sign in to view and customize your trip itinerary.');
-      navigate(`/login?redirect=${encodeURIComponent(`/trips/${selectedTrip.id}/itinerary`)}`, {
-        state: { from: `/trips/${selectedTrip.id}/itinerary` },
-      });
-    }
-  };
+  // Modal States for Destination Details and Add To Trip
+  const [selectedCityForDetails, setSelectedCityForDetails] = useState<Destination | null>(null);
+  const [targetForAddToTrip, setTargetForAddToTrip] = useState<
+    | { type: 'city'; destination: Destination }
+    | { type: 'activity'; activity: ActivityItem }
+    | null
+  >(null);
 
   // Load custom created trips from service on mount
   useEffect(() => {
@@ -74,6 +72,30 @@ export const LandingPage: React.FC = () => {
       setTrips(mockPreviousTrips);
     }
   }, []);
+
+  const handlePlanTrip = () => {
+    if (authService.getCurrentUser()) {
+      navigate('/trips/create');
+    } else {
+      showToast(
+        'info',
+        'Sign In Required',
+        'Please sign in or register to create and customize your trip.'
+      );
+      navigate('/login?redirect=/trips/create', { state: { from: '/trips/create' } });
+    }
+  };
+
+  const handleViewTrip = (selectedTrip: PreviousTrip) => {
+    if (authService.getCurrentUser()) {
+      navigate(`/trips/${selectedTrip.id}/itinerary`);
+    } else {
+      showToast('info', 'Sign In Required', 'Please sign in to view and customize your trip itinerary.');
+      navigate(`/login?redirect=${encodeURIComponent(`/trips/${selectedTrip.id}/itinerary`)}`, {
+        state: { from: `/trips/${selectedTrip.id}/itinerary` },
+      });
+    }
+  };
 
   const [filterState, setFilterState] = useState<FilterState>({
     searchQuery: '',
@@ -168,14 +190,18 @@ export const LandingPage: React.FC = () => {
     return groups;
   }, [filteredDestinations, filterState.groupBy]);
 
+  const featuredExperiences = useMemo(() => {
+    return allActivitiesList.slice(0, 4);
+  }, []);
+
   return (
-    <div className="min-h-screen bg-[#F7F1E5] text-[#252525] flex flex-col justify-between">
+    <div className="min-h-screen bg-[#F7F1E5] text-[#252525] flex flex-col justify-between selection:bg-[#F4C95D]/40">
       {/* Top Navbar */}
       <LandingNavbar />
 
       {/* Main Page Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-8 py-6 sm:py-8 space-y-10 sm:space-y-12">
-        {/* Large Travel Hero Banner Section */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-8 py-6 sm:py-8 space-y-12 sm:space-y-16">
+        {/* 1. Large Editorial Travel Hero Banner Section */}
         <section id="explore">
           <HeroBanner
             searchQuery={filterState.searchQuery}
@@ -184,10 +210,62 @@ export const LandingPage: React.FC = () => {
               const target = document.getElementById('top-destinations');
               target?.scrollIntoView({ behavior: 'smooth' });
             }}
+            onPlanTrip={handlePlanTrip}
           />
         </section>
 
-        {/* Filter and Control Toolbar (Search, Group By, Filter, Sort By) */}
+        {/* 2. Value Proposition & Trust Badges Section */}
+        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+          <div className="bg-[#FFF9EE] p-5 rounded-2xl border border-[#DAD4C7]/80 shadow-2xs space-y-2 hover:border-[#E3B443] transition-colors">
+            <div className="w-10 h-10 rounded-xl bg-[#F4C95D]/20 text-[#C29326] flex items-center justify-center">
+              <Calendar className="w-5 h-5" />
+            </div>
+            <h3 className="font-serif font-bold text-[#252525] text-base">
+              Smart Day Schedules
+            </h3>
+            <p className="text-xs text-[#6F6A60] leading-relaxed">
+              Design balanced day-by-day itineraries with automatic timing and easy drag-and-drop reordering.
+            </p>
+          </div>
+
+          <div className="bg-[#FFF9EE] p-5 rounded-2xl border border-[#DAD4C7]/80 shadow-2xs space-y-2 hover:border-[#E3B443] transition-colors">
+            <div className="w-10 h-10 rounded-xl bg-[#4E7360]/20 text-[#4E7360] flex items-center justify-center">
+              <Wallet className="w-5 h-5" />
+            </div>
+            <h3 className="font-serif font-bold text-[#252525] text-base">
+              Live Budget Tracking
+            </h3>
+            <p className="text-xs text-[#6F6A60] leading-relaxed">
+              Real-time cost breakdown across accommodation, transport, sightseeing, and dining with daily averages.
+            </p>
+          </div>
+
+          <div className="bg-[#FFF9EE] p-5 rounded-2xl border border-[#DAD4C7]/80 shadow-2xs space-y-2 hover:border-[#E3B443] transition-colors">
+            <div className="w-10 h-10 rounded-xl bg-[#D96B43]/20 text-[#D96B43] flex items-center justify-center">
+              <MapPin className="w-5 h-5" />
+            </div>
+            <h3 className="font-serif font-bold text-[#252525] text-base">
+              Multi-City Journeys
+            </h3>
+            <p className="text-xs text-[#6F6A60] leading-relaxed">
+              Seamlessly link multiple destination stops and explore curated attraction ideas for every stop.
+            </p>
+          </div>
+
+          <div className="bg-[#FFF9EE] p-5 rounded-2xl border border-[#DAD4C7]/80 shadow-2xs space-y-2 hover:border-[#E3B443] transition-colors">
+            <div className="w-10 h-10 rounded-xl bg-[#E3B443]/20 text-[#C29326] flex items-center justify-center">
+              <Users className="w-5 h-5" />
+            </div>
+            <h3 className="font-serif font-bold text-[#252525] text-base">
+              Community Clones
+            </h3>
+            <p className="text-xs text-[#6F6A60] leading-relaxed">
+              Discover real itineraries shared by fellow travelers and copy them into your personal account in one click.
+            </p>
+          </div>
+        </section>
+
+        {/* 3. Filter and Control Toolbar (Search, Group By, Filter, Sort By) */}
         <section>
           <FilterToolbar
             filterState={filterState}
@@ -197,16 +275,19 @@ export const LandingPage: React.FC = () => {
           />
         </section>
 
-        {/* Section: Top Regional Selections */}
-        <section id="top-destinations" className="scroll-mt-24">
+        {/* 4. Section: Top Regional Selections */}
+        <section id="top-destinations" className="scroll-mt-24 space-y-6">
           <SectionHeader
             title="Top Regional Selections"
             subtitle="Curated world-class destinations handpicked for personalized travel planning"
             action={
-              <div className="flex items-center gap-2 text-xs font-semibold text-[#6F6A60]">
-                <span className="hidden sm:inline">Explore by popularity</span>
-                <span className="w-2 h-2 rounded-full bg-[#E3B443]" />
-              </div>
+              <Link
+                to="/cities"
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-[#C29326] hover:text-[#252525] transition-colors"
+              >
+                <span>View All Cities</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
             }
           />
 
@@ -252,10 +333,81 @@ export const LandingPage: React.FC = () => {
           )}
         </section>
 
-        {/* Section: Previous Trips with Plan a Trip CTA */}
+        {/* 5. Section: Curated Travel Experiences & Activities */}
+        <section className="space-y-6 pt-4 border-t border-[#DAD4C7]/60">
+          <SectionHeader
+            title="Curated Travel Experiences"
+            subtitle="Iconic attractions, culinary walking tours, and bucket-list adventures"
+            action={
+              <Link
+                to="/activities"
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-[#4E7360] hover:text-[#252525] transition-colors"
+              >
+                <span>Browse All Activities</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            }
+          />
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+            {featuredExperiences.map((act) => (
+              <div
+                key={act.id}
+                className="bg-[#FFF9EE] rounded-2xl border border-[#DAD4C7]/80 overflow-hidden shadow-2xs hover:shadow-md transition-all group flex flex-col justify-between"
+              >
+                <div>
+                  <div className="relative h-44 overflow-hidden">
+                    <img
+                      src={act.image}
+                      alt={act.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                    <span className="absolute top-2.5 left-2.5 px-2.5 py-1 rounded-full bg-white/90 backdrop-blur-xs text-[11px] font-bold text-[#252525]">
+                      {act.category}
+                    </span>
+                    <span className="absolute bottom-2.5 left-2.5 text-white text-xs font-semibold flex items-center gap-1">
+                      <MapPin className="w-3 h-3 text-[#F4C95D]" /> {act.city}, {act.country}
+                    </span>
+                  </div>
+
+                  <div className="p-4 space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-bold text-[#C29326] flex items-center gap-1">
+                        ⭐ {act.rating}
+                      </span>
+                      <span className="text-[#6F6A60] font-medium">{act.duration}</span>
+                    </div>
+                    <h4 className="font-serif font-bold text-sm text-[#252525] line-clamp-1 group-hover:text-[#C29326] transition-colors">
+                      {act.name}
+                    </h4>
+                    <p className="text-xs text-[#6F6A60] line-clamp-2 leading-relaxed">
+                      {act.description}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="p-4 pt-0 flex items-center justify-between border-t border-[#DAD4C7]/50 mt-2">
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-[#8C867B] block">From</span>
+                    <span className="text-xs font-bold text-[#252525]">{act.estimatedCost}</span>
+                  </div>
+                  <Link
+                    to="/activities"
+                    className="px-3 py-1.5 rounded-xl bg-white hover:bg-[#F4C95D] text-xs font-semibold text-[#252525] border border-[#DAD4C7] transition-colors shadow-2xs"
+                  >
+                    View Details
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* 6. Section: Previous Trips with Plan a Trip CTA */}
         <section id="previous-trips" className="scroll-mt-24 pt-4 border-t border-[#DAD4C7]/60">
           <SectionHeader
-            title="Previous Trips"
+            title="Previous Trips & Active Journeys"
             subtitle="Revisit your past journeys or create a new personalized travel itinerary"
             action={
               <Button
@@ -263,7 +415,7 @@ export const LandingPage: React.FC = () => {
                 size="md"
                 onClick={handlePlanTrip}
                 leftIcon={<Plus className="w-4 h-4 text-[#252525]" />}
-                className="shadow-sm hover:shadow-md"
+                className="shadow-sm hover:shadow-md font-bold"
               >
                 + Plan a Trip
               </Button>
@@ -295,36 +447,90 @@ export const LandingPage: React.FC = () => {
             </div>
           )}
         </section>
+
+        {/* 7. Community Explorer Spotlight Banner */}
+        <section className="bg-gradient-to-br from-[#FFF9EE] via-[#FCFAF5] to-[#EFE7D5] border border-white rounded-[28px] p-6 sm:p-10 shadow-sm relative overflow-hidden">
+          <div className="max-w-2xl relative z-10 space-y-3">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/80 border border-[#DAD4C7] text-xs font-bold text-[#C29326]">
+              <Sparkles className="w-3.5 h-3.5" /> Explorer Community Spotlight
+            </div>
+            <h3 className="text-2xl sm:text-3xl font-serif font-bold text-[#252525] tracking-tight">
+              "GlobeTrotter made planning our 10-day European tour effortless."
+            </h3>
+            <p className="text-xs sm:text-sm text-[#6F6A60] leading-relaxed">
+              Discover real trip logs, hidden cafés, and cliffside trails published by active travelers. Read their stories or clone entire itineraries directly into your account.
+            </p>
+            <div className="pt-2">
+              <Link to="/community">
+                <Button variant="outline" size="sm" className="font-bold text-xs">
+                  Browse Community Stories & Guides <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
+                </Button>
+              </Link>
+            </div>
+          </div>
+          <Quote className="hidden md:block absolute right-8 bottom-6 w-32 h-32 text-[#DAD4C7]/30 pointer-events-none" />
+        </section>
+
+        {/* 8. Call to Action Banner */}
+        <section className="bg-[#252525] text-white rounded-[28px] p-8 sm:p-12 text-center relative overflow-hidden shadow-xl shadow-black/10">
+          <div className="max-w-2xl mx-auto space-y-4 relative z-10">
+            <h2 className="text-2xl sm:text-4xl font-serif font-bold tracking-tight text-white">
+              Ready for your next adventure?
+            </h2>
+            <p className="text-xs sm:text-sm text-[#EFEBE3]/80 leading-relaxed max-w-xl mx-auto">
+              Build your custom day-by-day itinerary, track your budget, and explore the world with complete confidence.
+            </p>
+            <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+              <Button
+                variant="primary"
+                size="lg"
+                onClick={handlePlanTrip}
+                leftIcon={<Plus className="w-4 h-4 text-[#252525]" />}
+                className="w-full sm:w-auto font-bold"
+              >
+                Plan Your Trip Now
+              </Button>
+              <Link to="/cities" className="w-full sm:w-auto">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="w-full sm:w-auto text-white border-white/30 hover:bg-white/10 hover:text-white font-semibold"
+                >
+                  Explore Destinations
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </section>
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-[#DAD4C7]/80 bg-[#FFF9EE]/80 backdrop-blur-md mt-16 py-8 px-4 sm:px-8">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-[#6F6A60]">
-          <div className="flex items-center gap-3">
-            <span className="font-serif font-bold text-[#252525] text-sm">
-              Globe<span className="text-[#C29326]">Trotter</span>
-            </span>
-            <span>•</span>
-            <span>Personalized Travel Planning Platform</span>
-            <span>•</span>
-            <span className="flex items-center gap-1 text-[#4E7360] font-medium">
-              <ShieldCheck className="w-3.5 h-3.5" /> End-to-end verified
-            </span>
-          </div>
+      {/* Universal Footer */}
+      <Footer />
 
-          <div className="flex items-center gap-4 text-xs font-medium">
-            <a href="#explore" className="hover:text-[#252525] transition-colors">Explore</a>
-            <span>•</span>
-            <a href="#top-destinations" className="hover:text-[#252525] transition-colors">Destinations</a>
-            <span>•</span>
-            <a href="#previous-trips" className="hover:text-[#252525] transition-colors">My Trips</a>
-            <span>•</span>
-            <span className="text-[#8C867B] flex items-center gap-1">
-              Made with <Heart className="w-3 h-3 text-[#D96B43] fill-current" /> for Odoo Hackathon
-            </span>
-          </div>
-        </div>
-      </footer>
+      {/* City Details Modal */}
+      <CityDetailsModal
+        isOpen={Boolean(selectedCityForDetails)}
+        onClose={() => setSelectedCityForDetails(null)}
+        destination={selectedCityForDetails}
+        onAddToTrip={(dest) => {
+          setSelectedCityForDetails(null);
+          setTargetForAddToTrip({ type: 'city', destination: dest });
+        }}
+        onSelectActivity={(act) => {
+          setSelectedCityForDetails(null);
+          setTargetForAddToTrip({ type: 'activity', activity: act });
+        }}
+      />
+
+      {/* Add To Trip Modal */}
+      <AddToTripModal
+        isOpen={Boolean(targetForAddToTrip)}
+        onClose={() => setTargetForAddToTrip(null)}
+        target={targetForAddToTrip}
+        onSuccess={() => {
+          showToast('success', 'Added to Trip', 'Item saved to your itinerary.');
+        }}
+      />
     </div>
   );
 };

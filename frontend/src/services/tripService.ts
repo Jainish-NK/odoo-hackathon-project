@@ -912,6 +912,33 @@ export const tripService = {
     saveTrips(trips);
     return trip;
   },
+
+  /**
+   * Clones a public trip for a user with clean independent IDs
+   */
+  cloneTripForUser(sourceTrip: Trip, newUserId: string): Trip {
+    const trips = getInitialTrips();
+    const clonedTrip: Trip = {
+      ...sourceTrip,
+      id: `trip_clone_${Date.now()}`,
+      userId: newUserId,
+      name: `${sourceTrip.name} (Copy)`,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      sections: sourceTrip.sections.map((sec, idx) => ({
+        ...sec,
+        id: `sec_clone_${Date.now()}_${idx}`,
+      })),
+      destinations: sourceTrip.destinations ? [...sourceTrip.destinations] : [],
+      selectedPlaces: sourceTrip.selectedPlaces ? [...sourceTrip.selectedPlaces] : [],
+      selectedActivities: sourceTrip.selectedActivities ? [...sourceTrip.selectedActivities] : [],
+    };
+
+    trips.unshift(clonedTrip);
+    saveTrips(trips);
+    return clonedTrip;
+  },
 };
+
 
 

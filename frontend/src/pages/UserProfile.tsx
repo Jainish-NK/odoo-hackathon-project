@@ -8,6 +8,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { LandingNavbar } from '../components/landing/LandingNavbar';
+import { Footer } from '../components/ui/Footer';
 import { ProfileHeader } from '../components/profile/ProfileHeader';
 import { PersonalInfoForm } from '../components/profile/PersonalInfoForm';
 import { TravelPreferencesSection } from '../components/profile/TravelPreferencesSection';
@@ -266,10 +267,8 @@ export const UserProfile: React.FC = () => {
         </div>
       </main>
 
-      {/* 4. Global Footer */}
-      <footer className="border-t border-[#DAD4C7]/80 bg-[#FFF9EE]/80 backdrop-blur-md mt-16 py-6 px-4 sm:px-8 text-center text-xs text-[#8C867B]">
-        GlobeTrotter Personalized Travel Planning Platform • User Settings
-      </footer>
+      {/* 4. Universal Footer */}
+      <Footer />
     </div>
   );
 };

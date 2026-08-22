@@ -11,6 +11,10 @@ import {
   Bookmark,
   Plus,
   User as UserIcon,
+  Calendar as CalendarIcon,
+  TrendingUp,
+  Globe,
+  Users,
 } from 'lucide-react';
 import { authService } from '../../services/authService';
 import { User } from '../../types/auth';
@@ -28,11 +32,24 @@ export const LandingNavbar: React.FC = () => {
   const profileRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
 
+  // Sync user state on route change or storage change
   useEffect(() => {
     setCurrentUser(authService.getCurrentUser());
   }, [location.pathname]);
 
-  // Close dropdowns on outside click
+  // Lock body scroll when mobile menu is open
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isMobileMenuOpen]);
+
+  // Close dropdowns on outside click or Escape key
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
@@ -43,14 +60,27 @@ export const LandingNavbar: React.FC = () => {
       }
     };
 
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsProfileMenuOpen(false);
+        setIsNotificationsOpen(false);
+        setIsMobileMenuOpen(false);
+      }
+    };
+
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
   }, []);
 
   const handleLogout = () => {
     authService.logout();
     setCurrentUser(null);
     setIsProfileMenuOpen(false);
+    setIsMobileMenuOpen(false);
     showToast('info', 'Signed Out', 'You have been signed out successfully.');
     navigate('/');
   };
@@ -62,6 +92,7 @@ export const LandingNavbar: React.FC = () => {
 
   const handleMyTripsNav = () => {
     setIsMobileMenuOpen(false);
+    setIsProfileMenuOpen(false);
     const user = authService.getCurrentUser();
     if (!user) {
       showToast('info', 'Sign In Required', 'Please sign in to view your personal trips.');
@@ -73,6 +104,7 @@ export const LandingNavbar: React.FC = () => {
 
   const handlePlanTripClick = () => {
     setIsMobileMenuOpen(false);
+    setIsProfileMenuOpen(false);
     const user = authService.getCurrentUser();
     if (user) {
       navigate('/trips/create');
@@ -82,13 +114,20 @@ export const LandingNavbar: React.FC = () => {
     }
   };
 
+  const isCurrent = (path: string) => {
+    if (path === '/' || path === '/home') {
+      return location.pathname === '/' || location.pathname === '/home';
+    }
+    return location.pathname.startsWith(path);
+  };
+
   return (
-    <header className="sticky top-0 z-40 w-full bg-[#FFF9EE]/95 backdrop-blur-md border-b border-[#DAD4C7]/80">
+    <header className="sticky top-0 z-40 w-full bg-[#FFF9EE]/95 backdrop-blur-md border-b border-[#DAD4C7]/80 shadow-2xs">
       <div className="max-w-7xl mx-auto px-4 sm:px-8 h-18 flex items-center justify-between">
         {/* Left: Brand Logo */}
         <Link to="/" className="flex items-center gap-2.5 group select-none">
           <div className="relative w-9 h-9 rounded-xl bg-gradient-to-br from-[#F4C95D] to-[#E3B443] flex items-center justify-center text-[#252525] shadow-xs shadow-[#F4C95D]/30 border border-white/70">
-            <Compass className="w-4.5 h-4.5 transition-transform duration-500 group-hover:rotate-45" />
+            <Compass className="w-5 h-5 transition-transform duration-500 group-hover:rotate-45" />
             <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-[#4E7360] rounded-full border border-[#FFF9EE] flex items-center justify-center">
               <Sparkles className="w-1 h-1 text-white" />
             </span>
@@ -101,57 +140,87 @@ export const LandingNavbar: React.FC = () => {
         </Link>
 
         {/* Center: Navigation Links (Desktop) */}
-        <nav className="hidden md:flex items-center gap-6">
+        <nav className="hidden lg:flex items-center gap-1 xl:gap-2">
           <Link
             to="/"
-            className={`text-[14px] font-medium transition-colors ${
-              location.pathname === '/' || location.pathname === '/home'
-                ? 'text-[#252525] font-semibold'
-                : 'text-[#6F6A60] hover:text-[#252525]'
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+              isCurrent('/')
+                ? 'bg-white text-[#252525] shadow-2xs border border-[#DAD4C7]/60'
+                : 'text-[#6F6A60] hover:text-[#252525] hover:bg-black/5'
             }`}
           >
-            Explore
+            Home
           </Link>
           <Link
             to="/cities"
-            className={`text-[14px] font-medium transition-colors ${
-              location.pathname === '/cities'
-                ? 'text-[#252525] font-semibold'
-                : 'text-[#6F6A60] hover:text-[#252525]'
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+              isCurrent('/cities') || isCurrent('/destinations')
+                ? 'bg-white text-[#252525] shadow-2xs border border-[#DAD4C7]/60'
+                : 'text-[#6F6A60] hover:text-[#252525] hover:bg-black/5'
             }`}
           >
-            Cities
+            Destinations
           </Link>
           <Link
             to="/activities"
-            className={`text-[14px] font-medium transition-colors ${
-              location.pathname === '/activities'
-                ? 'text-[#252525] font-semibold'
-                : 'text-[#6F6A60] hover:text-[#252525]'
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+              isCurrent('/activities') || isCurrent('/experiences')
+                ? 'bg-white text-[#252525] shadow-2xs border border-[#DAD4C7]/60'
+                : 'text-[#6F6A60] hover:text-[#252525] hover:bg-black/5'
             }`}
           >
-            Activities
+            Experiences
           </Link>
           <button
             type="button"
             onClick={handleMyTripsNav}
-            className={`text-[14px] font-medium transition-colors cursor-pointer ${
-              location.pathname === '/trips'
-                ? 'text-[#252525] font-semibold'
-                : 'text-[#6F6A60] hover:text-[#252525]'
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+              isCurrent('/trips')
+                ? 'bg-white text-[#252525] shadow-2xs border border-[#DAD4C7]/60'
+                : 'text-[#6F6A60] hover:text-[#252525] hover:bg-black/5'
             }`}
           >
             My Trips
           </button>
+          <Link
+            to="/calendar"
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+              isCurrent('/calendar')
+                ? 'bg-white text-[#252525] shadow-2xs border border-[#DAD4C7]/60'
+                : 'text-[#6F6A60] hover:text-[#252525] hover:bg-black/5'
+            }`}
+          >
+            Calendar
+          </Link>
+          <Link
+            to="/community"
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+              isCurrent('/community')
+                ? 'bg-white text-[#252525] shadow-2xs border border-[#DAD4C7]/60'
+                : 'text-[#6F6A60] hover:text-[#252525] hover:bg-black/5'
+            }`}
+          >
+            Community
+          </Link>
+          <Link
+            to="/insights"
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+              isCurrent('/insights')
+                ? 'bg-white text-[#252525] shadow-2xs border border-[#DAD4C7]/60'
+                : 'text-[#6F6A60] hover:text-[#252525] hover:bg-black/5'
+            }`}
+          >
+            Insights
+          </Link>
         </nav>
 
         {/* Right: Actions (Plan Trip, Notifications & Profile) */}
-        <div className="flex items-center gap-2.5 sm:gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           {/* Quick "+ Plan a Trip" Button */}
           <button
             type="button"
             onClick={handlePlanTripClick}
-            className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#F4C95D] hover:bg-[#E3B443] text-xs font-bold text-[#252525] transition-all shadow-xs cursor-pointer"
+            className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#F4C95D] hover:bg-[#E3B443] text-xs font-bold text-[#252525] transition-all shadow-xs cursor-pointer active:scale-95 border border-[#E3B443]/40"
           >
             <Plus className="w-3.5 h-3.5" /> Plan a Trip
           </button>
@@ -164,7 +233,7 @@ export const LandingNavbar: React.FC = () => {
               aria-label="Notifications"
               className="p-2 text-[#6F6A60] hover:text-[#252525] hover:bg-black/5 rounded-xl transition-colors relative cursor-pointer"
             >
-              <Bell className="w-5 h-5" />
+              <Bell className="w-4.5 h-4.5" />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#E3B443] rounded-full border-2 border-[#FFF9EE]" />
             </button>
 
@@ -175,8 +244,8 @@ export const LandingNavbar: React.FC = () => {
                 style={{ boxShadow: '0 16px 36px -8px rgba(45, 37, 24, 0.18)' }}
               >
                 <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#DAD4C7]/60">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-[#6F6A60]">Notifications</span>
-                  <span className="text-[11px] font-semibold text-[#4E7360] bg-[#E7EFEA] px-2 py-0.5 rounded-full">New</span>
+                  <span className="text-xs font-semibold uppercase tracking-wider text-[#6F6A60]">Travel Updates</span>
+                  <span className="text-[11px] font-semibold text-[#4E7360] bg-[#E7EFEA] px-2 py-0.5 rounded-full">Active</span>
                 </div>
                 <div className="space-y-2.5">
                   <div className="flex items-start gap-2.5 text-xs">
@@ -193,8 +262,8 @@ export const LandingNavbar: React.FC = () => {
                       <Bookmark className="w-3.5 h-3.5" />
                     </div>
                     <div>
-                      <p className="font-semibold text-[#252525]">Europe Explorer Itinerary Saved</p>
-                      <p className="text-[#6F6A60] text-[11px] mt-0.5">5 destinations synced with your explorer account.</p>
+                      <p className="font-semibold text-[#252525]">Europe Explorer Itinerary Synced</p>
+                      <p className="text-[#6F6A60] text-[11px] mt-0.5">Destinations and day budgets are verified.</p>
                     </div>
                   </div>
                 </div>
@@ -208,7 +277,7 @@ export const LandingNavbar: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setIsProfileMenuOpen((prev) => !prev)}
-                className="flex items-center gap-2 p-1 pl-2.5 bg-white/70 hover:bg-white border border-[#DAD4C7]/80 rounded-full transition-all cursor-pointer shadow-2xs"
+                className="flex items-center gap-2 p-1 pl-2.5 bg-white/80 hover:bg-white border border-[#DAD4C7] rounded-full transition-all cursor-pointer shadow-2xs"
               >
                 <span className="text-xs font-semibold text-[#252525] max-w-[100px] truncate hidden sm:inline">
                   {currentUser.firstName}
@@ -237,6 +306,13 @@ export const LandingNavbar: React.FC = () => {
                     <p className="text-[11px] text-[#6F6A60] truncate">{currentUser.email}</p>
                   </div>
                   <div className="py-1">
+                    <Link
+                      to="/insights"
+                      onClick={() => setIsProfileMenuOpen(false)}
+                      className="w-full text-left px-3 py-2 text-xs font-bold text-[#4E7360] bg-[#E7EFEA]/70 hover:bg-[#E7EFEA] rounded-xl transition-colors flex items-center gap-2 cursor-pointer mb-1"
+                    >
+                      <TrendingUp className="w-3.5 h-3.5 text-[#4E7360]" /> Travel Insights
+                    </Link>
                     <button
                       type="button"
                       onClick={handleMyTripsNav}
@@ -244,6 +320,13 @@ export const LandingNavbar: React.FC = () => {
                     >
                       <Plane className="w-3.5 h-3.5 text-[#6F6A60]" /> My Saved Trips
                     </button>
+                    <Link
+                      to="/calendar"
+                      onClick={() => setIsProfileMenuOpen(false)}
+                      className="w-full text-left px-3 py-2 text-xs font-medium text-[#252525] hover:bg-black/5 rounded-xl transition-colors flex items-center gap-2 cursor-pointer"
+                    >
+                      <CalendarIcon className="w-3.5 h-3.5 text-[#6F6A60]" /> Travel Calendar
+                    </Link>
                     <Link
                       to="/profile"
                       onClick={() => setIsProfileMenuOpen(false)}
@@ -272,7 +355,7 @@ export const LandingNavbar: React.FC = () => {
               </Link>
               <Link
                 to="/register"
-                className="px-4 py-2 text-xs font-semibold text-[#252525] bg-[#F4C95D] hover:bg-[#E3B443] rounded-xl shadow-xs transition-all"
+                className="px-3.5 py-1.5 text-xs font-semibold text-[#252525] bg-[#F4C95D] hover:bg-[#E3B443] rounded-xl shadow-xs transition-all border border-[#E3B443]/40"
               >
                 Register
               </Link>
@@ -284,79 +367,137 @@ export const LandingNavbar: React.FC = () => {
             type="button"
             onClick={() => setIsMobileMenuOpen((prev) => !prev)}
             aria-label="Toggle menu"
-            className="md:hidden p-2 text-[#6F6A60] hover:text-[#252525] rounded-xl hover:bg-black/5 transition-colors cursor-pointer"
+            className="lg:hidden p-2 text-[#6F6A60] hover:text-[#252525] rounded-xl hover:bg-black/5 transition-colors cursor-pointer"
           >
             {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
         </div>
       </div>
 
-      {/* Mobile Collapsible Navigation Menu */}
+      {/* Mobile Backdrop & Drawer */}
       {isMobileMenuOpen && (
-        <div className="md:hidden px-4 pb-4 pt-2 border-t border-[#DAD4C7]/60 bg-[#FFF9EE] space-y-2 animate-in slide-in-from-top-2 duration-150">
-          <Link
-            to="/"
-            onClick={() => setIsMobileMenuOpen(false)}
-            className="block w-full text-left px-3 py-2 text-sm font-medium text-[#252525] rounded-xl hover:bg-black/5"
-          >
-            Explore
-          </Link>
-          <Link
-            to="/cities"
-            onClick={() => setIsMobileMenuOpen(false)}
-            className="block w-full text-left px-3 py-2 text-sm font-medium text-[#252525] rounded-xl hover:bg-black/5"
-          >
-            Explore Cities
-          </Link>
-          <Link
-            to="/activities"
-            onClick={() => setIsMobileMenuOpen(false)}
-            className="block w-full text-left px-3 py-2 text-sm font-medium text-[#252525] rounded-xl hover:bg-black/5"
-          >
-            Explore Activities
-          </Link>
-          <button
-            type="button"
-            onClick={handleMyTripsNav}
-            className="w-full text-left px-3 py-2 text-sm font-medium text-[#6F6A60] rounded-xl hover:bg-black/5"
-          >
-            My Trips
-          </button>
-          <button
-            type="button"
-            onClick={handlePlanTripClick}
-            className="w-full text-center py-2.5 text-xs font-bold text-[#252525] bg-[#F4C95D] hover:bg-[#E3B443] rounded-xl shadow-xs"
-          >
-            + Plan a New Trip
-          </button>
-          {!currentUser ? (
-            <div className="pt-2 border-t border-[#DAD4C7]/60 flex gap-2">
-              <Link
-                to="/login"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="flex-1 text-center py-2 text-xs font-semibold bg-white border border-[#DAD4C7] rounded-xl"
-              >
-                Sign In
-              </Link>
-              <Link
-                to="/register"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="flex-1 text-center py-2 text-xs font-semibold bg-[#F4C95D] text-[#252525] rounded-xl"
-              >
-                Register
-              </Link>
-            </div>
-          ) : (
-            <div className="pt-2 border-t border-[#DAD4C7]/60">
+        <div className="fixed inset-0 top-18 z-50 lg:hidden flex flex-col bg-black/40 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-[#FFF9EE] border-b border-[#DAD4C7] p-5 space-y-3 shadow-xl max-h-[calc(100vh-4.5rem)] overflow-y-auto">
+            <Link
+              to="/"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className={`block w-full text-left px-3.5 py-2.5 text-sm font-semibold rounded-xl transition-colors ${
+                isCurrent('/') ? 'bg-[#F4C95D]/30 text-[#252525]' : 'text-[#6F6A60] hover:bg-black/5'
+              }`}
+            >
+              Home
+            </Link>
+            <Link
+              to="/cities"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className={`block w-full text-left px-3.5 py-2.5 text-sm font-semibold rounded-xl transition-colors ${
+                isCurrent('/cities') ? 'bg-[#F4C95D]/30 text-[#252525]' : 'text-[#6F6A60] hover:bg-black/5'
+              }`}
+            >
+              <Globe className="w-4 h-4 inline-block mr-2 text-[#C29326]" />
+              Explore Destinations
+            </Link>
+            <Link
+              to="/activities"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className={`block w-full text-left px-3.5 py-2.5 text-sm font-semibold rounded-xl transition-colors ${
+                isCurrent('/activities') ? 'bg-[#F4C95D]/30 text-[#252525]' : 'text-[#6F6A60] hover:bg-black/5'
+              }`}
+            >
+              <Sparkles className="w-4 h-4 inline-block mr-2 text-[#4E7360]" />
+              Explore Experiences
+            </Link>
+            <button
+              type="button"
+              onClick={handleMyTripsNav}
+              className={`block w-full text-left px-3.5 py-2.5 text-sm font-semibold rounded-xl transition-colors cursor-pointer ${
+                isCurrent('/trips') ? 'bg-[#F4C95D]/30 text-[#252525]' : 'text-[#6F6A60] hover:bg-black/5'
+              }`}
+            >
+              <Plane className="w-4 h-4 inline-block mr-2 text-[#6F6A60]" />
+              My Trips Portfolio
+            </button>
+            <Link
+              to="/calendar"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className={`block w-full text-left px-3.5 py-2.5 text-sm font-semibold rounded-xl transition-colors ${
+                isCurrent('/calendar') ? 'bg-[#F4C95D]/30 text-[#252525]' : 'text-[#6F6A60] hover:bg-black/5'
+              }`}
+            >
+              <CalendarIcon className="w-4 h-4 inline-block mr-2 text-[#C29326]" />
+              Travel Calendar
+            </Link>
+            <Link
+              to="/community"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className={`block w-full text-left px-3.5 py-2.5 text-sm font-semibold rounded-xl transition-colors ${
+                isCurrent('/community') ? 'bg-[#F4C95D]/30 text-[#252525]' : 'text-[#6F6A60] hover:bg-black/5'
+              }`}
+            >
+              <Users className="w-4 h-4 inline-block mr-2 text-[#D96B43]" />
+              Community Stories
+            </Link>
+            <Link
+              to="/insights"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className={`block w-full text-left px-3.5 py-2.5 text-sm font-semibold rounded-xl transition-colors ${
+                isCurrent('/insights') ? 'bg-[#F4C95D]/30 text-[#252525]' : 'text-[#6F6A60] hover:bg-black/5'
+              }`}
+            >
+              <TrendingUp className="w-4 h-4 inline-block mr-2 text-[#4E7360]" />
+              Travel Insights
+            </Link>
+
+            <div className="pt-2 border-t border-[#DAD4C7]/60 space-y-2">
               <button
                 type="button"
-                onClick={handleLogout}
-                className="w-full text-left px-3 py-2 text-xs font-semibold text-[#D96B43] hover:bg-[#FAECE7] rounded-xl flex items-center gap-2"
+                onClick={handlePlanTripClick}
+                className="w-full text-center py-2.5 text-xs font-bold text-[#252525] bg-[#F4C95D] hover:bg-[#E3B443] rounded-xl shadow-xs"
               >
-                <LogOut className="w-4 h-4" /> Sign Out ({currentUser.firstName})
+                + Plan a New Trip
               </button>
+
+              {!currentUser ? (
+                <div className="flex gap-2 pt-1">
+                  <Link
+                    to="/login"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="flex-1 text-center py-2 text-xs font-semibold bg-white border border-[#DAD4C7] rounded-xl"
+                  >
+                    Sign In
+                  </Link>
+                  <Link
+                    to="/register"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="flex-1 text-center py-2 text-xs font-semibold bg-[#F4C95D] text-[#252525] rounded-xl"
+                  >
+                    Register
+                  </Link>
+                </div>
+              ) : (
+                <div className="pt-1">
+                  <Link
+                    to="/profile"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="block w-full text-center py-2 text-xs font-semibold bg-white border border-[#DAD4C7] rounded-xl mb-2"
+                  >
+                    Profile & Settings ({currentUser.firstName})
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="w-full text-left px-3 py-2 text-xs font-semibold text-[#D96B43] hover:bg-[#FAECE7] rounded-xl flex items-center justify-center gap-2"
+                  >
+                    <LogOut className="w-4 h-4" /> Sign Out
+                  </button>
+                </div>
+              )}
             </div>
-          )}
+          </div>
+          <div
+            className="flex-1"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
         </div>
       )}
     </header>
