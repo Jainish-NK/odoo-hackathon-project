@@ -1,20 +1,18 @@
 import compression from 'compression';
 import cors from 'cors';
-import express, { Express, Request, Response } from 'express';
+import express, { Express } from 'express';
 import helmet from 'helmet';
 import pinoHttp from 'pino-http';
 import swaggerUi from 'swagger-ui-express';
 
 import { env, isProduction } from '@/config/env';
 import { logger } from '@/lib/logger';
-import { isDatabaseHealthy } from '@/lib/prisma';
-import { redisClient } from '@/lib/redis';
 import { swaggerSpec } from '@/lib/swagger';
 import { errorMiddleware } from '@/middleware/error.middleware';
 import { notFoundMiddleware } from '@/middleware/not-found.middleware';
 import { apiRateLimiter } from '@/middleware/rate-limit.middleware';
+import healthRoutes from '@/modules/health/health.routes';
 import apiRoutes from '@/routes';
-import { sendSuccess } from '@/utils/response';
 
 export function createApp(): Express {
   const app = express();
@@ -40,34 +38,9 @@ export function createApp(): Express {
     }),
   );
 
-  /**
-   * @openapi
-   * /health:
-   *   get:
-   *     summary: Liveness/readiness probe
-   *     description: Not versioned — used by orchestrators and uptime checks.
-   */
-  app.get('/health', async (_req: Request, res: Response) => {
-    const [databaseHealthy, redisHealthy] = await Promise.all([
-      isDatabaseHealthy(),
-      Promise.resolve(redisClient.isHealthy()),
-    ]);
-
-    const healthy = databaseHealthy && redisHealthy;
-
-    sendSuccess(
-      res,
-      {
-        status: healthy ? 'ok' : 'degraded',
-        uptime: process.uptime(),
-        dependencies: {
-          database: databaseHealthy ? 'connected' : 'unavailable',
-          redis: redisHealthy ? 'connected' : 'unavailable',
-        },
-      },
-      healthy ? 200 : 503,
-    );
-  });
+  // Health check routes for orchestrators, proxies, and uptime monitors
+  app.use('/health', healthRoutes);
+  app.use('/api/health', healthRoutes);
 
   if (!isProduction) {
     app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));

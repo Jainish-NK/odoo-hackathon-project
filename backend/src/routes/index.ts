@@ -5,6 +5,7 @@ import adminRoutes from '@/modules/admin/admin.routes';
 import authRoutes from '@/modules/auth/auth.routes';
 import citiesRoutes from '@/modules/cities/cities.routes';
 import communityRoutes from '@/modules/community/community.routes';
+import healthRoutes from '@/modules/health/health.routes';
 import publicRoutes from '@/modules/community/public.routes';
 import tripsRoutes from '@/modules/trips/trips.routes';
 import usersRoutes from '@/modules/users/users.routes';
@@ -17,6 +18,7 @@ import usersRoutes from '@/modules/users/users.routes';
  */
 const router = Router();
 
+router.use('/health', healthRoutes);
 router.use('/auth', authRoutes);
 router.use('/users', usersRoutes);
 router.use('/cities', citiesRoutes);
