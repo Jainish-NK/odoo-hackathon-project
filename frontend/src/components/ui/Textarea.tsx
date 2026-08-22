@@ -62,12 +62,12 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
             id={textareaId}
             disabled={disabled}
             maxLength={maxLength}
-            value={value}
+            value={value !== undefined ? value : ''}
             aria-invalid={Boolean(error)}
             aria-describedby={error ? errorId : helperText ? helperId : undefined}
             className={twMerge(
               clsx(
-                'w-full text-[14px] text-[#252525] placeholder:text-[#8C867B]/70 bg-white/85 border rounded-xl p-3.5 min-h-[110px] max-h-[160px] resize-y transition-all duration-200 focus:outline-none focus:bg-white',
+                'w-full text-[14px] text-[#252525] placeholder:text-[#8C867B]/70 bg-white/85 border rounded-xl p-3.5 min-h-[90px] max-h-[160px] resize-y transition-all duration-200 focus:outline-none focus:bg-white',
                 error
                   ? 'border-[#D96B43] focus:border-[#D96B43] focus:ring-4 focus:ring-[#D96B43]/15'
                   : 'border-[#DAD4C7] hover:border-[#B7B0A2] focus:border-[#E3B443] focus:ring-4 focus:ring-[#F4C95D]/20',
