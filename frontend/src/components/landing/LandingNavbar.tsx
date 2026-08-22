@@ -90,18 +90,6 @@ export const LandingNavbar: React.FC = () => {
     setIsProfileMenuOpen(false);
   };
 
-  const handleMyTripsNav = () => {
-    setIsMobileMenuOpen(false);
-    setIsProfileMenuOpen(false);
-    const user = authService.getCurrentUser();
-    if (!user) {
-      showToast('info', 'Sign In Required', 'Please sign in to view your personal trips.');
-      navigate('/login?redirect=/trips', { state: { from: '/trips' } });
-      return;
-    }
-    navigate('/trips');
-  };
-
   const handlePlanTripClick = () => {
     setIsMobileMenuOpen(false);
     setIsProfileMenuOpen(false);
@@ -171,17 +159,16 @@ export const LandingNavbar: React.FC = () => {
           >
             Experiences
           </Link>
-          <button
-            type="button"
-            onClick={handleMyTripsNav}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+          <Link
+            to="/trips"
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
               isCurrent('/trips')
                 ? 'bg-white text-[#252525] shadow-2xs border border-[#DAD4C7]/60'
                 : 'text-[#6F6A60] hover:text-[#252525] hover:bg-black/5'
             }`}
           >
             My Trips
-          </button>
+          </Link>
           <Link
             to="/calendar"
             className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
@@ -313,13 +300,13 @@ export const LandingNavbar: React.FC = () => {
                     >
                       <TrendingUp className="w-3.5 h-3.5 text-[#4E7360]" /> Travel Insights
                     </Link>
-                    <button
-                      type="button"
-                      onClick={handleMyTripsNav}
+                    <Link
+                      to="/trips"
+                      onClick={() => setIsProfileMenuOpen(false)}
                       className="w-full text-left px-3 py-2 text-xs font-medium text-[#252525] hover:bg-black/5 rounded-xl transition-colors flex items-center gap-2 cursor-pointer"
                     >
                       <Plane className="w-3.5 h-3.5 text-[#6F6A60]" /> My Saved Trips
-                    </button>
+                    </Link>
                     <Link
                       to="/calendar"
                       onClick={() => setIsProfileMenuOpen(false)}
@@ -407,16 +394,16 @@ export const LandingNavbar: React.FC = () => {
               <Sparkles className="w-4 h-4 inline-block mr-2 text-[#4E7360]" />
               Explore Experiences
             </Link>
-            <button
-              type="button"
-              onClick={handleMyTripsNav}
-              className={`block w-full text-left px-3.5 py-2.5 text-sm font-semibold rounded-xl transition-colors cursor-pointer ${
+            <Link
+              to="/trips"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className={`block w-full text-left px-3.5 py-2.5 text-sm font-semibold rounded-xl transition-colors ${
                 isCurrent('/trips') ? 'bg-[#F4C95D]/30 text-[#252525]' : 'text-[#6F6A60] hover:bg-black/5'
               }`}
             >
               <Plane className="w-4 h-4 inline-block mr-2 text-[#6F6A60]" />
               My Trips Portfolio
-            </button>
+            </Link>
             <Link
               to="/calendar"
               onClick={() => setIsMobileMenuOpen(false)}

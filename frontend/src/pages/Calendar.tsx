@@ -16,8 +16,6 @@ import { authService } from '../services/authService';
 import { Trip, ItinerarySection } from '../types/trip';
 
 export const Calendar: React.FC = () => {
-  const currentUser = authService.getCurrentUser();
-
   const [trips, setTrips] = useState<Trip[]>([]);
   const [currentMonthDate, setCurrentMonthDate] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<CalendarViewMode>('month');
@@ -33,11 +31,12 @@ export const Calendar: React.FC = () => {
 
   // Load user trips on mount
   useEffect(() => {
-    if (currentUser) {
-      const userTrips = tripService.getUserTrips(currentUser.id);
+    const user = authService.getCurrentUser();
+    if (user) {
+      const userTrips = tripService.getUserTrips(user.id);
       setTrips(userTrips);
     }
-  }, [currentUser]);
+  }, []);
 
   // Real-time calculated summary stats
   const summaryStats = useMemo(() => {

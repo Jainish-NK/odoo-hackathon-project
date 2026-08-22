@@ -46,8 +46,6 @@ export const BuildItinerary: React.FC = () => {
   const navigate = useNavigate();
   const { showToast } = useToast();
 
-  const currentUser = authService.getCurrentUser();
-
   const [trip, setTrip] = useState<Trip | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isUnauthorized, setIsUnauthorized] = useState(false);
@@ -68,7 +66,8 @@ export const BuildItinerary: React.FC = () => {
 
   // Load trip on mount
   useEffect(() => {
-    if (!currentUser) {
+    const user = authService.getCurrentUser();
+    if (!user) {
       navigate(`/login?redirect=${encodeURIComponent(`/trips/${tripId}/itinerary`)}`, {
         state: { from: `/trips/${tripId}/itinerary` },
         replace: true,
@@ -79,7 +78,7 @@ export const BuildItinerary: React.FC = () => {
     if (tripId) {
       const found = tripService.getTripById(tripId);
       if (found) {
-        if (found.userId && found.userId !== currentUser.id && found.userId !== 'usr_default_1') {
+        if (found.userId && found.userId !== user.id && found.userId !== 'usr_default_1') {
           setIsUnauthorized(true);
         } else {
           setTrip(found);
@@ -87,7 +86,7 @@ export const BuildItinerary: React.FC = () => {
       }
     }
     setIsLoading(false);
-  }, [tripId, currentUser, navigate]);
+  }, [tripId, navigate]);
 
   // Total Duration
   const durationDays = useMemo(() => {
