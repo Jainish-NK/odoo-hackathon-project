@@ -41,8 +41,20 @@ class RedisClient {
   }
 
   async connect(): Promise<void> {
-    if (this.client.status === 'ready' || this.client.status === 'connecting') return;
-    await this.client.connect();
+    if (this.client.status === 'ready') return;
+    try {
+      await this.client.connect();
+    } catch (err) {
+      // ioredis throws synchronously if connect() is called while a connection
+      // attempt is already in flight (status transitions through several
+      // non-'ready' states — 'connecting', 'connect', 'reconnecting' — that a
+      // simple status check can race against). That's not a real failure, so
+      // don't let it crash startup; only rethrow genuine connection errors.
+      if (err instanceof Error && /already connecting|already connected/i.test(err.message)) {
+        return;
+      }
+      throw err;
+    }
   }
 
   async disconnect(): Promise<void> {

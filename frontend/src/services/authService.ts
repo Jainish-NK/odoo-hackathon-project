@@ -1,19 +1,39 @@
 import { AuthResponse, LoginFormData, RegisterFormData, User } from '../types/auth';
+import { apiClient, ApiRequestError, tokenStorage } from './api';
 
-const STORAGE_KEY_USER = 'globetrotter_current_user';
-const STORAGE_KEY_USERS_DB = 'globetrotter_mock_users';
+// The real backend's User only has: id, email, name, phone, profilePhotoUrl,
+// role, languagePreference, isActive, createdAt, updatedAt. Several fields
+// this frontend was designed around (city, country, additionalInfo,
+// travelStyles, budgetPreference, preferredCurrency, emailNotifications,
+// tripReminders) have no backend counterpart at all — there's nowhere to
+// send or fetch them. They're kept as a local-only overlay (per user id) so
+// the profile UI keeps working, but they are NOT synced to the server and
+// will not follow the user to another device. This is a known gap, not a
+// bug: closing it for real means adding those columns/endpoints server-side.
+interface ProfileOverlay {
+  city?: string;
+  country?: string;
+  additionalInfo?: string;
+  travelStyles?: string[];
+  budgetPreference?: 'Budget' | 'Moderate' | 'Luxury';
+  preferredCurrency?: string;
+  emailNotifications?: boolean;
+  tripReminders?: boolean;
+  avatarPreviewUrl?: string;
+}
 
-// Initialize default mock user if none exists
-const initMockDB = (): User[] => {
-  const existing = localStorage.getItem(STORAGE_KEY_USERS_DB);
-  if (existing) {
-    try {
-      return JSON.parse(existing) as User[];
-    } catch {
-      // fallback
-    }
+const OVERLAY_KEY_PREFIX = 'globetrotter_profile_overlay_';
+
+function readOverlay(userId: string): ProfileOverlay {
+  try {
+    const raw = localStorage.getItem(OVERLAY_KEY_PREFIX + userId);
+    return raw ? (JSON.parse(raw) as ProfileOverlay) : {};
+  } catch {
+    return {};
   }
+}
 
+<<<<<<< HEAD
   const defaultUsers: User[] = [
     {
       id: 'usr_default_1',
@@ -93,258 +113,258 @@ const initMockDB = (): User[] => {
       tripReminders: true,
     },
   ];
+=======
+function writeOverlay(userId: string, overlay: ProfileOverlay): void {
+  localStorage.setItem(OVERLAY_KEY_PREFIX + userId, JSON.stringify(overlay));
+}
+>>>>>>> 40f0140 (done)
 
-  localStorage.setItem(STORAGE_KEY_USERS_DB, JSON.stringify(defaultUsers));
-  return defaultUsers;
-};
+interface BackendUser {
+  id: string;
+  email: string;
+  name: string;
+  phone: string | null;
+  profilePhotoUrl: string | null;
+  role: 'USER' | 'ADMIN';
+  languagePreference: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
 
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+interface BackendCity {
+  id: string;
+  name: string;
+  country: string;
+}
+
+interface AuthTokens {
+  accessToken: string;
+  refreshToken: string;
+}
+
+function splitName(fullName: string): { firstName: string; lastName: string } {
+  const trimmed = fullName.trim();
+  const spaceIndex = trimmed.indexOf(' ');
+  if (spaceIndex === -1) return { firstName: trimmed, lastName: '' };
+  return { firstName: trimmed.slice(0, spaceIndex), lastName: trimmed.slice(spaceIndex + 1) };
+}
+
+function toFrontendUser(backendUser: BackendUser, savedDestinationIds: string[] = []): User {
+  const overlay = readOverlay(backendUser.id);
+  const { firstName, lastName } = splitName(backendUser.name);
+
+  return {
+    id: backendUser.id,
+    firstName,
+    lastName,
+    fullName: backendUser.name,
+    email: backendUser.email,
+    phoneNumber: backendUser.phone ?? '',
+    city: overlay.city ?? '',
+    country: overlay.country ?? '',
+    avatarUrl: backendUser.profilePhotoUrl ?? overlay.avatarPreviewUrl,
+    additionalInfo: overlay.additionalInfo ?? '',
+    createdAt: backendUser.createdAt,
+    travelStyles: overlay.travelStyles ?? [],
+    budgetPreference: overlay.budgetPreference ?? 'Moderate',
+    preferredCurrency: overlay.preferredCurrency ?? 'INR (₹)',
+    savedDestinationIds,
+    emailNotifications: overlay.emailNotifications ?? true,
+    tripReminders: overlay.tripReminders ?? true,
+  };
+}
+
+let currentUserCache: User | null = null;
+
+async function fetchSavedDestinationIds(): Promise<string[]> {
+  try {
+    const res = await apiClient.get<BackendCity[]>('/users/me/saved-destinations');
+    return res.data.map((c) => c.id);
+  } catch {
+    return [];
+  }
+}
+
+/** Loads the full profile (fresh from the server) and caches it for getCurrentUser(). */
+async function loadAndCacheCurrentUser(): Promise<User> {
+  const [profileRes, savedDestinationIds] = await Promise.all([
+    apiClient.get<BackendUser>('/users/me'),
+    fetchSavedDestinationIds(),
+  ]);
+  const user = toFrontendUser(profileRes.data, savedDestinationIds);
+  currentUserCache = user;
+  return user;
+}
+
+function friendlyMessage(err: unknown, fallback: string): string {
+  if (err instanceof ApiRequestError) {
+    return err.message || fallback;
+  }
+  return fallback;
+}
 
 export const authService = {
-  /**
-   * Mock User Login
-   * Ready for future: POST /api/auth/login
-   */
   async login(data: LoginFormData): Promise<AuthResponse> {
-    await delay(750);
-    const users = initMockDB();
-
-    const normalizedEmail = data.email.trim().toLowerCase();
-    const existingUser = users.find((u) => u.email.toLowerCase() === normalizedEmail);
-
-    // For mock testing: if password is less than 6 chars, fail
-    if (data.password.length < 6) {
-      return {
-        success: false,
-        message: 'Invalid password. Must be at least 6 characters.',
-      };
+    try {
+      const res = await apiClient.post<{ user: BackendUser; tokens: AuthTokens }>(
+        '/auth/login',
+        { email: data.email, password: data.password },
+        false,
+      );
+      tokenStorage.setTokens(res.data.tokens.accessToken, res.data.tokens.refreshToken);
+      const savedDestinationIds = await fetchSavedDestinationIds();
+      const user = toFrontendUser(res.data.user, savedDestinationIds);
+      currentUserCache = user;
+      return { success: true, message: `Welcome back, ${user.firstName}!`, user, token: res.data.tokens.accessToken };
+    } catch (err) {
+      return { success: false, message: friendlyMessage(err, 'Invalid email or password.') };
     }
+  },
 
-    if (!existingUser) {
-      // Create a temporary session for any valid format login during hackathon testing
-      const syntheticUser: User = {
-        id: `usr_${Date.now()}`,
-        firstName: normalizedEmail.split('@')[0].split('.')[0] || 'Traveler',
-        lastName: 'Explorer',
-        fullName: `${normalizedEmail.split('@')[0]}`,
-        email: normalizedEmail,
-        phoneNumber: '+1 (555) 000-0000',
-        city: 'Kyoto',
-        country: 'Japan',
-        avatarUrl: undefined,
-        additionalInfo: 'GlobeTrotter explorer discovering wonders across the globe.',
-        createdAt: new Date().toISOString(),
-        travelStyles: ['Cultural', 'Nature'],
+  async register(data: RegisterFormData): Promise<AuthResponse> {
+    try {
+      const name = `${data.firstName.trim()} ${data.lastName.trim()}`.trim();
+      const res = await apiClient.post<{ user: BackendUser; tokens: AuthTokens }>(
+        '/auth/register',
+        { email: data.email, password: data.password, name },
+        false,
+      );
+      tokenStorage.setTokens(res.data.tokens.accessToken, res.data.tokens.refreshToken);
+
+      // Fields the backend supports beyond name/email get a follow-up PATCH;
+      // everything else (city/country/additionalInfo) goes to the local overlay.
+      if (data.phoneNumber.trim()) {
+        try {
+          await apiClient.patch('/users/me', { phone: data.phoneNumber.trim() });
+        } catch {
+          // non-fatal — registration itself already succeeded
+        }
+      }
+      writeOverlay(res.data.user.id, {
+        city: data.city.trim(),
+        country: data.country.trim(),
+        additionalInfo: data.additionalInfo.trim(),
+        avatarPreviewUrl: data.avatarPreviewUrl,
+        travelStyles: ['Cultural', 'Adventure'],
         budgetPreference: 'Moderate',
         preferredCurrency: 'INR (₹)',
-        savedDestinationIds: ['dest_kyoto', 'dest_tokyo'],
         emailNotifications: true,
         tripReminders: true,
-      };
-      
-      localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(syntheticUser));
-      return {
-        success: true,
-        message: 'Welcome back to GlobeTrotter!',
-        user: syntheticUser,
-        token: `mock_jwt_token_${Date.now()}`,
-      };
-    }
+      });
 
-    localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(existingUser));
-    return {
-      success: true,
-      message: `Welcome back, ${existingUser.firstName}!`,
-      user: existingUser,
-      token: `mock_jwt_token_${Date.now()}`,
-    };
+      const user = toFrontendUser(
+        { ...res.data.user, phone: data.phoneNumber.trim() || res.data.user.phone },
+        [],
+      );
+      currentUserCache = user;
+      return { success: true, message: 'Account created successfully! Welcome to GlobeTrotter.', user, token: res.data.tokens.accessToken };
+    } catch (err) {
+      return { success: false, message: friendlyMessage(err, 'Could not create your account.') };
+    }
   },
 
-  /**
-   * Mock User Registration
-   * Ready for future: POST /api/auth/register
-   */
-  async register(data: RegisterFormData): Promise<AuthResponse> {
-    await delay(900);
-    const users = initMockDB();
-
-    const normalizedEmail = data.email.trim().toLowerCase();
-    const existingUser = users.find((u) => u.email.toLowerCase() === normalizedEmail);
-
-    if (existingUser) {
-      return {
-        success: false,
-        message: 'An account with this email address already exists. Please sign in.',
-      };
-    }
-
-    const newUser: User = {
-      id: `usr_${Date.now()}`,
-      firstName: data.firstName.trim(),
-      lastName: data.lastName.trim(),
-      fullName: `${data.firstName.trim()} ${data.lastName.trim()}`,
-      email: normalizedEmail,
-      phoneNumber: data.phoneNumber.trim(),
-      city: data.city.trim(),
-      country: data.country.trim(),
-      avatarUrl: data.avatarPreviewUrl,
-      additionalInfo: data.additionalInfo.trim(),
-      createdAt: new Date().toISOString(),
-      travelStyles: ['Cultural', 'Adventure'],
-      budgetPreference: 'Moderate',
-      preferredCurrency: 'INR (₹)',
-      savedDestinationIds: [],
-      emailNotifications: true,
-      tripReminders: true,
-    };
-
-    users.push(newUser);
-    localStorage.setItem(STORAGE_KEY_USERS_DB, JSON.stringify(users));
-    localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(newUser));
-
-    return {
-      success: true,
-      message: 'Account created successfully! Welcome to GlobeTrotter.',
-      user: newUser,
-      token: `mock_jwt_token_${Date.now()}`,
-    };
-  },
-
-  /**
-   * Mock Forgot Password Request
-   * Ready for future: POST /api/auth/forgot-password
-   */
   async forgotPassword(email: string): Promise<AuthResponse> {
-    await delay(600);
-    return {
-      success: true,
-      message: `Password reset instructions have been sent to ${email}`,
-    };
+    try {
+      await apiClient.post('/auth/forgot-password', { email }, false);
+      return { success: true, message: `If an account exists for ${email}, password reset instructions have been sent.` };
+    } catch (err) {
+      return { success: false, message: friendlyMessage(err, 'Could not process that request.') };
+    }
   },
 
   /**
-   * Get Active Session User
+   * Synchronous session check for render-time gating (e.g. ProtectedRoute):
+   * true only if we hold an access token. It does not guarantee the token
+   * is still valid server-side — a stale/expired token still resolves
+   * truthy here and is caught on the next real API call instead.
    */
+  isAuthenticated(): boolean {
+    return tokenStorage.hasSession();
+  },
+
+  /** Best-effort synchronous read of the last-loaded profile; null until loadCurrentUser() has resolved once. */
   getCurrentUser(): User | null {
-    const raw = localStorage.getItem(STORAGE_KEY_USER);
-    if (!raw) return null;
+    return currentUserCache;
+  },
+
+  /** Fetches the current profile from the server. Call this once on app load / after login. */
+  async loadCurrentUser(): Promise<User | null> {
+    if (!tokenStorage.hasSession()) return null;
     try {
-      return JSON.parse(raw) as User;
+      return await loadAndCacheCurrentUser();
     } catch {
       return null;
     }
   },
 
-  /**
-   * Update Profile Details
-   */
   async updateProfile(userId: string, updates: Partial<User>): Promise<AuthResponse> {
-    await delay(500);
-    const users = initMockDB();
-    const index = users.findIndex((u) => u.id === userId);
-    
-    // Fallback if editing default or active synthetic user
-    const current = this.getCurrentUser();
-    if (!current) {
-      return { success: false, message: 'No active session found.' };
+    try {
+      const backendPatch: Record<string, unknown> = {};
+      if (updates.firstName !== undefined || updates.lastName !== undefined) {
+        const current = currentUserCache;
+        const firstName = updates.firstName ?? current?.firstName ?? '';
+        const lastName = updates.lastName ?? current?.lastName ?? '';
+        backendPatch.name = `${firstName} ${lastName}`.trim();
+      }
+      if (updates.phoneNumber !== undefined) backendPatch.phone = updates.phoneNumber || null;
+      if (updates.avatarUrl !== undefined) backendPatch.profilePhotoUrl = updates.avatarUrl || null;
+
+      if (Object.keys(backendPatch).length > 0) {
+        await apiClient.patch('/users/me', backendPatch);
+      }
+
+      const overlay = readOverlay(userId);
+      const nextOverlay: ProfileOverlay = {
+        ...overlay,
+        ...(updates.city !== undefined ? { city: updates.city } : {}),
+        ...(updates.country !== undefined ? { country: updates.country } : {}),
+        ...(updates.additionalInfo !== undefined ? { additionalInfo: updates.additionalInfo } : {}),
+        ...(updates.travelStyles !== undefined ? { travelStyles: updates.travelStyles } : {}),
+        ...(updates.budgetPreference !== undefined ? { budgetPreference: updates.budgetPreference } : {}),
+        ...(updates.preferredCurrency !== undefined ? { preferredCurrency: updates.preferredCurrency } : {}),
+        ...(updates.emailNotifications !== undefined ? { emailNotifications: updates.emailNotifications } : {}),
+        ...(updates.tripReminders !== undefined ? { tripReminders: updates.tripReminders } : {}),
+      };
+      writeOverlay(userId, nextOverlay);
+
+      const user = await loadAndCacheCurrentUser();
+      return { success: true, message: 'Profile updated successfully!', user };
+    } catch (err) {
+      return { success: false, message: friendlyMessage(err, 'Could not update your profile.') };
     }
+  },
 
-    const updatedUser: User = {
-      ...current,
-      ...updates,
-      id: current.id, // Preserve ID
-      fullName: updates.firstName || updates.lastName
-        ? `${(updates.firstName ?? current.firstName).trim()} ${(updates.lastName ?? current.lastName).trim()}`
-        : current.fullName,
-    };
-
-    if (index !== -1) {
-      users[index] = updatedUser;
-      localStorage.setItem(STORAGE_KEY_USERS_DB, JSON.stringify(users));
-    }
-
-    localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(updatedUser));
-
+  async changePassword(_userId: string, _currentPassword: string, _newPassword: string): Promise<AuthResponse> {
+    // The backend's password-change path is the token-based reset flow
+    // (forgot-password → email a token → reset-password), not an
+    // authenticated "current password" endpoint — there is no
+    // PATCH /users/me/password on the API. Surfacing that honestly here
+    // rather than pretending a call succeeded.
     return {
-      success: true,
-      message: 'Profile updated successfully!',
-      user: updatedUser,
+      success: false,
+      message: 'Changing your password in-session isn\'t available yet — use "Forgot password" from the login page instead.',
     };
   },
 
-  /**
-   * Change Password
-   */
-  async changePassword(_userId: string, currentPassword: string, newPassword: string): Promise<AuthResponse> {
-    await delay(600);
-    if (!currentPassword || currentPassword.length < 6) {
-      return { success: false, message: 'Current password is incorrect.' };
-    }
-    if (!newPassword || newPassword.length < 6) {
-      return { success: false, message: 'New password must be at least 6 characters long.' };
-    }
-    return {
-      success: true,
-      message: 'Your password has been changed securely.',
-    };
-  },
-
-  /**
-   * Toggle Saved Destination Wishlist
-   */
   async toggleSavedDestination(userId: string, destinationId: string): Promise<User | null> {
-    const current = this.getCurrentUser();
+    const current = currentUserCache;
     if (!current || current.id !== userId) return null;
 
-    const currentList = current.savedDestinationIds || [];
-    const exists = currentList.includes(destinationId);
-    const updatedList = exists
-      ? currentList.filter((id) => id !== destinationId)
-      : [...currentList, destinationId];
-
-    const updatedUser: User = {
-      ...current,
-      savedDestinationIds: updatedList,
-    };
-
-    const users = initMockDB();
-    const index = users.findIndex((u) => u.id === userId);
-    if (index !== -1) {
-      users[index] = updatedUser;
-      localStorage.setItem(STORAGE_KEY_USERS_DB, JSON.stringify(users));
-    }
-    localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(updatedUser));
-    return updatedUser;
-  },
-
-  /**
-   * Delete Account & Wipe Associated Data
-   */
-  async deleteAccount(userId: string): Promise<boolean> {
-    await delay(700);
-    const users = initMockDB();
-    const filteredUsers = users.filter((u) => u.id !== userId);
-    localStorage.setItem(STORAGE_KEY_USERS_DB, JSON.stringify(filteredUsers));
-
-    // Remove user trips
     try {
-      const STORAGE_KEY_TRIPS = 'globetrotter_user_trips_v2';
-      const tripsRaw = localStorage.getItem(STORAGE_KEY_TRIPS);
-      if (tripsRaw) {
-        const trips = JSON.parse(tripsRaw);
-        if (Array.isArray(trips)) {
-          const userRemainingTrips = trips.filter((t: { userId?: string }) => t.userId !== userId);
-          localStorage.setItem(STORAGE_KEY_TRIPS, JSON.stringify(userRemainingTrips));
-        }
+      const isSaved = current.savedDestinationIds?.includes(destinationId);
+      if (isSaved) {
+        await apiClient.delete(`/users/me/saved-destinations/${destinationId}`);
+      } else {
+        await apiClient.post(`/users/me/saved-destinations/${destinationId}`);
       }
+      return await loadAndCacheCurrentUser();
     } catch {
-      // ignore
+      return current;
     }
-
-    localStorage.removeItem(STORAGE_KEY_USER);
-    return true;
   },
 
+<<<<<<< HEAD
   /**
    * Check whether a user has administrative privileges
    */
@@ -366,5 +386,29 @@ export const authService = {
    */
   logout(): void {
     localStorage.removeItem(STORAGE_KEY_USER);
+=======
+  async deleteAccount(_userId: string): Promise<boolean> {
+    try {
+      await apiClient.delete('/users/me');
+      tokenStorage.clearTokens();
+      currentUserCache = null;
+      return true;
+    } catch {
+      return false;
+    }
+  },
+
+  async logout(): Promise<void> {
+    const refreshToken = tokenStorage.getRefreshToken();
+    tokenStorage.clearTokens();
+    currentUserCache = null;
+    if (refreshToken) {
+      try {
+        await apiClient.post('/auth/logout', { refreshToken }, false);
+      } catch {
+        // best-effort — local session is already cleared either way
+      }
+    }
+>>>>>>> 40f0140 (done)
   },
 };

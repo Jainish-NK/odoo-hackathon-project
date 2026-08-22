@@ -48,8 +48,7 @@ export const AddToTripModal: React.FC<AddToTripModalProps> = ({
       return;
     }
     setIsLoggedIn(true);
-    const trips = tripService.getUserTrips(user.id);
-    setUserTrips(trips);
+    void tripService.getUserTrips(user.id).then(setUserTrips);
   }, [isOpen]);
 
   if (!target) return null;
@@ -60,7 +59,7 @@ export const AddToTripModal: React.FC<AddToTripModalProps> = ({
     ? `${target.destination.city}, ${target.destination.country}`
     : `${target.activity.city}, ${target.activity.country}`;
 
-  const handleAddCity = (trip: Trip) => {
+  const handleAddCity = async (trip: Trip) => {
     if (!isCity) return;
     setAddingTripId(trip.id);
 
@@ -73,7 +72,7 @@ export const AddToTripModal: React.FC<AddToTripModalProps> = ({
       image: target.destination.image,
     };
 
-    const updated = tripService.addDestinationToTrip(trip.id, destOption);
+    const updated = await tripService.addDestinationToTrip(trip.id, destOption);
     setAddingTripId(null);
 
     if (updated) {
@@ -87,11 +86,11 @@ export const AddToTripModal: React.FC<AddToTripModalProps> = ({
     }
   };
 
-  const handleAddActivity = (trip: Trip) => {
+  const handleAddActivity = async (trip: Trip) => {
     if (isCity) return;
     setAddingTripId(trip.id);
 
-    const updated = tripService.addActivityToTrip(trip.id, target.activity, true);
+    const updated = await tripService.addActivityToTrip(trip.id, target.activity, true);
     setAddingTripId(null);
 
     if (updated) {

@@ -32,10 +32,11 @@ export const Calendar: React.FC = () => {
   // Load user trips on mount
   useEffect(() => {
     const user = authService.getCurrentUser();
-    if (user) {
-      const userTrips = tripService.getUserTrips(user.id);
+    if (!user) return;
+    void (async () => {
+      const userTrips = await tripService.getUserTrips(user.id);
       setTrips(userTrips);
-    }
+    })();
   }, []);
 
   // Real-time calculated summary stats

@@ -16,7 +16,7 @@ import { CityDetailsModal } from '../components/discovery/CityDetailsModal';
 import { AddToTripModal } from '../components/discovery/AddToTripModal';
 import { Footer } from '../components/ui/Footer';
 import { Button } from '../components/ui/Button';
-import { mockDestinations } from '../data/landingData';
+import { catalogService } from '../services/catalogService';
 import { Destination, CityFilterState, CityGroupByOption, CitySortOption } from '../types/landing';
 import { authService } from '../services/authService';
 import { tripService } from '../services/tripService';
@@ -46,6 +46,8 @@ export const CitySearch: React.FC = () => {
 
   const [currentUser, setCurrentUser] = useState(authService.getCurrentUser());
   const [userTrips, setUserTrips] = useState<Trip[]>([]);
+  const [destinations, setDestinations] = useState<Destination[]>([]);
+  const [isLoadingCities, setIsLoadingCities] = useState(true);
 
   // Filter State
   const [filters, setFilters] = useState<CityFilterState>({
@@ -72,37 +74,57 @@ export const CitySearch: React.FC = () => {
     const user = authService.getCurrentUser();
     setCurrentUser(user);
     if (user) {
-      const trips = tripService.getUserTrips(user.id);
-      setUserTrips(trips);
+      void tripService.getUserTrips(user.id).then(setUserTrips);
     }
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setIsLoadingCities(true);
+      try {
+        const cities = await catalogService.getCities();
+        if (!cancelled) setDestinations(cities);
+      } catch {
+        if (!cancelled) {
+          showToast('error', 'Could not load cities', 'Please check your connection and try again.');
+        }
+      } finally {
+        if (!cancelled) setIsLoadingCities(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Extract unique regions & countries
   const availableRegions = useMemo(() => {
     const set = new Set<string>();
-    mockDestinations.forEach((d) => set.add(d.region));
+    destinations.forEach((d) => set.add(d.region));
     return ['all', ...Array.from(set).sort()];
-  }, []);
+  }, [destinations]);
 
   const availableCountries = useMemo(() => {
     const set = new Set<string>();
-    mockDestinations.forEach((d) => {
+    destinations.forEach((d) => {
       if (filters.selectedRegion === 'all' || d.region === filters.selectedRegion) {
         set.add(d.country);
       }
     });
     return ['all', ...Array.from(set).sort()];
-  }, [filters.selectedRegion]);
+  }, [filters.selectedRegion, destinations]);
 
   const availableTravelStyles = useMemo(() => {
     const set = new Set<string>();
-    mockDestinations.forEach((d) => set.add(d.travelStyle));
+    destinations.forEach((d) => set.add(d.travelStyle));
     return ['all', ...Array.from(set).sort()];
-  }, []);
+  }, [destinations]);
 
   // Filter & Sort Logic
   const filteredDestinations = useMemo(() => {
-    let result = [...mockDestinations];
+    let result = [...destinations];
 
     // 1. Search Query
     if (filters.searchQuery.trim()) {
@@ -164,7 +186,7 @@ export const CitySearch: React.FC = () => {
     });
 
     return result;
-  }, [filters]);
+  }, [filters, destinations]);
 
   // Grouping Logic
   const groupedDestinations = useMemo(() => {
@@ -511,7 +533,14 @@ export const CitySearch: React.FC = () => {
         <ActiveFilterChips chips={activeChips} onClearAll={handleClearAllFilters} />
 
         {/* Destination Results Grid / Grouped Sections */}
-        {filteredDestinations.length === 0 ? (
+        {isLoadingCities ? (
+          <div className="bg-[#FFF9EE] rounded-3xl border border-[#DAD4C7]/80 p-8 sm:p-14 text-center space-y-3 shadow-sm">
+            <div className="w-14 h-14 rounded-2xl bg-[#FCFAF5] border border-[#DAD4C7] flex items-center justify-center mx-auto text-[#C29326] animate-pulse">
+              <Globe className="w-7 h-7" />
+            </div>
+            <p className="text-xs text-[#6F6A60]">Loading destinations…</p>
+          </div>
+        ) : filteredDestinations.length === 0 ? (
           /* Empty State */
           <div className="bg-[#FFF9EE] rounded-3xl border border-[#DAD4C7]/80 p-8 sm:p-14 text-center space-y-4 shadow-sm">
             <div className="w-14 h-14 rounded-2xl bg-[#FCFAF5] border border-[#DAD4C7] flex items-center justify-center mx-auto text-[#C29326]">
@@ -607,7 +636,7 @@ export const CitySearch: React.FC = () => {
         target={targetForAddToTrip}
         onSuccess={() => {
           if (currentUser) {
-            setUserTrips(tripService.getUserTrips(currentUser.id));
+            void tripService.getUserTrips(currentUser.id).then(setUserTrips);
           }
         }}
       />

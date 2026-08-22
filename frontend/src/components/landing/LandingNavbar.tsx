@@ -20,11 +20,13 @@ import {
 import { authService } from '../../services/authService';
 import { User } from '../../types/auth';
 import { useToast } from '../../context/ToastContext';
+import { useAuth } from '../../context/AuthContext';
 
 export const LandingNavbar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { showToast } = useToast();
+  const { logout } = useAuth();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
@@ -77,8 +79,8 @@ export const LandingNavbar: React.FC = () => {
     };
   }, []);
 
-  const handleLogout = () => {
-    authService.logout();
+  const handleLogout = async () => {
+    await logout();
     setCurrentUser(null);
     setIsProfileMenuOpen(false);
     setIsMobileMenuOpen(false);

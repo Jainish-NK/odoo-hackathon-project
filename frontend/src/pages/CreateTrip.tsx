@@ -117,7 +117,7 @@ export const CreateTrip: React.FC = () => {
   };
 
   // Submission handler
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!validate()) {
@@ -134,7 +134,7 @@ export const CreateTrip: React.FC = () => {
 
     setIsSubmitting(true);
 
-    setTimeout(() => {
+    try {
       // Find selected place objects
       const selectedPlaces = mockSuggestedPlaces.filter((p) =>
         formData.selectedPlaceIds.includes(p.id)
@@ -146,7 +146,7 @@ export const CreateTrip: React.FC = () => {
       );
 
       // Save trip in service
-      const newTrip = tripService.createTrip({
+      const newTrip = await tripService.createTrip({
         userId: currentUser.id,
         name: formData.tripName.trim(),
         startDate: formData.startDate,
@@ -163,9 +163,12 @@ export const CreateTrip: React.FC = () => {
         `"${newTrip.name}" is initialized. Let's customize your itinerary schedule!`
       );
 
-      setIsSubmitting(false);
       navigate(`/trips/${newTrip.id}/itinerary`);
-    }, 600);
+    } catch {
+      showToast('error', 'Could Not Create Trip', 'Something went wrong while saving your trip. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const totalSuggestionsAdded =

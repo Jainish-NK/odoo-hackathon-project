@@ -46,10 +46,11 @@ export const LandingPage: React.FC = () => {
 
   // Load custom created trips from service on mount
   useEffect(() => {
-    try {
-      const user = authService.getCurrentUser();
-      if (user) {
-        const userTrips = tripService.getUserTrips(user.id);
+    const user = authService.getCurrentUser();
+    if (!user) return;
+    void (async () => {
+      try {
+        const userTrips = await tripService.getUserTrips(user.id);
         if (userTrips.length > 0) {
           const formatted: PreviousTrip[] = userTrips.map((t: Trip) => ({
             id: t.id,
@@ -66,11 +67,11 @@ export const LandingPage: React.FC = () => {
           setTrips(formatted);
           return;
         }
+        setTrips(mockPreviousTrips);
+      } catch {
+        setTrips(mockPreviousTrips);
       }
-      setTrips(mockPreviousTrips);
-    } catch {
-      setTrips(mockPreviousTrips);
-    }
+    })();
   }, []);
 
   const handlePlanTrip = () => {

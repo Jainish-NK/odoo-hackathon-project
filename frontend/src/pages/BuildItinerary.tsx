@@ -76,16 +76,19 @@ export const BuildItinerary: React.FC = () => {
     }
 
     if (tripId) {
-      const found = tripService.getTripById(tripId);
-      if (found) {
-        if (found.userId && found.userId !== user.id && found.userId !== 'usr_default_1') {
-          setIsUnauthorized(true);
-        } else {
-          setTrip(found);
+      void tripService.getTripById(tripId).then((found) => {
+        if (found) {
+          if (found.userId && found.userId !== user.id && found.userId !== 'usr_default_1') {
+            setIsUnauthorized(true);
+          } else {
+            setTrip(found);
+          }
         }
-      }
+        setIsLoading(false);
+      });
+    } else {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   }, [tripId, navigate]);
 
   // Total Duration
@@ -284,11 +287,11 @@ export const BuildItinerary: React.FC = () => {
     setIsFormOpen(true);
   };
 
-  const handleSaveSection = (sectionData: Omit<ItinerarySection, 'id' | 'order'>) => {
+  const handleSaveSection = async (sectionData: Omit<ItinerarySection, 'id' | 'order'>) => {
     if (!trip) return;
 
     if (editingSection) {
-      const updated = tripService.updateItinerarySection(trip.id, editingSection.id, sectionData);
+      const updated = await tripService.updateItinerarySection(trip.id, editingSection.id, sectionData);
       if (updated) {
         setTrip({ ...updated });
         showToast('success', 'Section Updated', `"${sectionData.title}" has been updated.`);
@@ -296,7 +299,7 @@ export const BuildItinerary: React.FC = () => {
         setEditingSection(null);
       }
     } else {
-      const updated = tripService.addItinerarySection(trip.id, sectionData);
+      const updated = await tripService.addItinerarySection(trip.id, sectionData);
       if (updated) {
         setTrip({ ...updated });
         showToast('success', 'Section Added', `"${sectionData.title}" added to your itinerary.`);
@@ -311,10 +314,10 @@ export const BuildItinerary: React.FC = () => {
     setIsDeleteModalOpen(true);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (!trip || !deletingSection) return;
 
-    const updated = tripService.deleteItinerarySection(trip.id, deletingSection.id);
+    const updated = await tripService.deleteItinerarySection(trip.id, deletingSection.id);
     if (updated) {
       setTrip({ ...updated });
       showToast('info', 'Section Removed', `"${deletingSection.title}" was removed from the itinerary.`);
@@ -323,7 +326,7 @@ export const BuildItinerary: React.FC = () => {
     setDeletingSection(null);
   };
 
-  const handleMoveUp = (sectionId: string) => {
+  const handleMoveUp = async (sectionId: string) => {
     if (!trip) return;
     const index = trip.sections.findIndex((s) => s.id === sectionId);
     if (index <= 0) return;
@@ -333,14 +336,14 @@ export const BuildItinerary: React.FC = () => {
     newSections[index - 1] = newSections[index];
     newSections[index] = temp;
 
-    const updated = tripService.reorderItinerarySections(
+    const updated = await tripService.reorderItinerarySections(
       trip.id,
       newSections.map((s) => s.id)
     );
     if (updated) setTrip({ ...updated });
   };
 
-  const handleMoveDown = (sectionId: string) => {
+  const handleMoveDown = async (sectionId: string) => {
     if (!trip) return;
     const index = trip.sections.findIndex((s) => s.id === sectionId);
     if (index === -1 || index >= trip.sections.length - 1) return;
@@ -350,7 +353,7 @@ export const BuildItinerary: React.FC = () => {
     newSections[index + 1] = newSections[index];
     newSections[index] = temp;
 
-    const updated = tripService.reorderItinerarySections(
+    const updated = await tripService.reorderItinerarySections(
       trip.id,
       newSections.map((s) => s.id)
     );
@@ -358,7 +361,7 @@ export const BuildItinerary: React.FC = () => {
   };
 
   // Quick-add suggestion into a new section
-  const handleQuickAddPlace = (place: SuggestedPlace) => {
+  const handleQuickAddPlace = async (place: SuggestedPlace) => {
     if (!trip) return;
     const sectionData: Omit<ItinerarySection, 'id' | 'order'> = {
       type: 'sightseeing',
@@ -369,14 +372,14 @@ export const BuildItinerary: React.FC = () => {
       location: `${place.name}, ${place.city}`,
       budget: 2500,
     };
-    const updated = tripService.addItinerarySection(trip.id, sectionData);
+    const updated = await tripService.addItinerarySection(trip.id, sectionData);
     if (updated) {
       setTrip({ ...updated });
       showToast('success', 'Added to Itinerary', `"${place.name}" added to your schedule.`);
     }
   };
 
-  const handleQuickAddActivity = (act: SuggestedActivity) => {
+  const handleQuickAddActivity = async (act: SuggestedActivity) => {
     if (!trip) return;
     let budget = 4500;
     const match = act.estimatedCost.match(/([0-9,]+)/);
@@ -394,7 +397,7 @@ export const BuildItinerary: React.FC = () => {
       location: `${act.name}, ${act.city}`,
       budget,
     };
-    const updated = tripService.addItinerarySection(trip.id, sectionData);
+    const updated = await tripService.addItinerarySection(trip.id, sectionData);
     if (updated) {
       setTrip({ ...updated });
       showToast('success', 'Added to Itinerary', `"${act.name}" added to your schedule.`);

@@ -1,6 +1,55 @@
 import { CommunityPost } from '../types/community';
+import { apiClient } from './api';
 
 const STORAGE_KEY_COMMUNITY = 'globetrotter_community_posts';
+
+// ── Real public trips from the backend (see src/modules/community) ────
+// The backend has no "community post" concept (title/content/tags/likes)
+// — only public Trips. Real public trips are mapped into the CommunityPost
+// shape and merged into the feed as read-only entries; the like/edit/
+// delete actions below only ever operate on the local mock posts array
+// (a real-trip post's id is never found there, so those actions safely
+// no-op on it rather than erroring). Copying one, though, uses `tripId`
+// (a real backend trip id) and goes through the real copy endpoint —
+// that's the one interaction here that's fully functional, not cosmetic.
+
+interface BackendCommunityTrip {
+  id: string;
+  name: string;
+  description: string | null;
+  coverImageUrl: string | null;
+  startDate: string;
+  endDate: string;
+  createdAt: string;
+  owner: { id: string; name: string; profilePhotoUrl: string | null };
+  _count: { stops: number; copies?: number };
+}
+
+function toCommunityPost(trip: BackendCommunityTrip): CommunityPost {
+  return {
+    id: `trip_${trip.id}`,
+    authorId: trip.owner.id,
+    authorName: trip.owner.name,
+    authorAvatar: trip.owner.profilePhotoUrl ?? undefined,
+    title: trip.name,
+    content:
+      trip.description ||
+      `A ${trip._count.stops}-stop itinerary shared by ${trip.owner.name}. Copy it to make it your own.`,
+    destinationCity: '',
+    destinationCountry: '',
+    experienceType: 'Trip Itinerary',
+    imageUrl: trip.coverImageUrl ?? undefined,
+    tripId: trip.id,
+    tripName: trip.name,
+    tags: [],
+    // No like system exists on the backend — copy count is a real,
+    // already-tracked engagement signal, reused here rather than inventing one.
+    likes: trip._count.copies ?? 0,
+    likedBy: [],
+    createdAt: trip.createdAt,
+    isPublic: true,
+  };
+}
 
 const seedCommunityPosts: CommunityPost[] = [
   {
@@ -164,6 +213,20 @@ export const communityService = {
   getPublicPosts(): CommunityPost[] {
     const posts = getStoredPosts();
     return posts.filter((p) => p.isPublic);
+  },
+
+  /** Real public trips from the backend, mapped into the feed shape. Read-only. */
+  async getRealPublicTrips(): Promise<CommunityPost[]> {
+    try {
+      const { data } = await apiClient.get<BackendCommunityTrip[]>(
+        '/community/trips',
+        { limit: 50 },
+        false,
+      );
+      return data.map(toCommunityPost);
+    } catch {
+      return [];
+    }
   },
 
   /**

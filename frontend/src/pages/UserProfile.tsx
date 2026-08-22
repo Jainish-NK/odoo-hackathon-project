@@ -20,6 +20,7 @@ import { tripService, getTripStatus } from '../services/tripService';
 import { User } from '../types/auth';
 import { Trip } from '../types/trip';
 import { useToast } from '../context/ToastContext';
+import { useAuth } from '../context/AuthContext';
 
 type TabType = 'all' | 'personal' | 'preferences' | 'saved' | 'security';
 
@@ -27,6 +28,7 @@ export const UserProfile: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { showToast } = useToast();
+  const { logout } = useAuth();
 
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [userTrips, setUserTrips] = useState<Trip[]>([]);
@@ -43,9 +45,11 @@ export const UserProfile: React.FC = () => {
     setCurrentUser(user);
 
     // Fetch user trips for real calculated statistics
-    const trips = tripService.getUserTrips(user.id);
-    setUserTrips(trips);
-    setIsLoading(false);
+    void (async () => {
+      const trips = await tripService.getUserTrips(user.id);
+      setUserTrips(trips);
+      setIsLoading(false);
+    })();
   }, [navigate, location.pathname]);
 
   // 2. Real-time Calculated Statistics
@@ -117,8 +121,8 @@ export const UserProfile: React.FC = () => {
   };
 
   // 7. Sign Out Handler
-  const handleSignOut = () => {
-    authService.logout();
+  const handleSignOut = async () => {
+    await logout();
     showToast('info', 'Signed Out', 'You have been signed out successfully.');
     navigate('/');
   };

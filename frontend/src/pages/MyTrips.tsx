@@ -48,9 +48,11 @@ export const MyTrips: React.FC = () => {
     setCurrentUser(user);
 
     // Fetch user's trips from tripService
-    const userTrips = tripService.getUserTrips(user.id);
-    setTrips(userTrips);
-    setIsLoading(false);
+    void (async () => {
+      const userTrips = await tripService.getUserTrips(user.id);
+      setTrips(userTrips);
+      setIsLoading(false);
+    })();
   }, [navigate]);
 
   // 2. Extract unique available cities from user's trips for destination filter
@@ -172,16 +174,18 @@ export const MyTrips: React.FC = () => {
     setIsDeleting(true);
 
     setTimeout(() => {
-      const success = tripService.deleteTrip(tripToDelete.id, currentUser.id);
-      if (success) {
-        const updated = tripService.getUserTrips(currentUser.id);
-        setTrips(updated);
-        showToast('success', 'Trip Deleted', `"${tripToDelete.name}" was successfully removed.`);
-      } else {
-        showToast('error', 'Error', 'Failed to delete trip. Please try again.');
-      }
-      setIsDeleting(false);
-      setTripToDelete(null);
+      void (async () => {
+        const success = await tripService.deleteTrip(tripToDelete.id, currentUser.id);
+        if (success) {
+          const updated = await tripService.getUserTrips(currentUser.id);
+          setTrips(updated);
+          showToast('success', 'Trip Deleted', `"${tripToDelete.name}" was successfully removed.`);
+        } else {
+          showToast('error', 'Error', 'Failed to delete trip. Please try again.');
+        }
+        setIsDeleting(false);
+        setTripToDelete(null);
+      })();
     }, 400);
   };
 

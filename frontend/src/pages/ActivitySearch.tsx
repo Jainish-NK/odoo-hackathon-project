@@ -16,10 +16,11 @@ import { ActivityDetailsModal } from '../components/discovery/ActivityDetailsMod
 import { AddToTripModal } from '../components/discovery/AddToTripModal';
 import { Footer } from '../components/ui/Footer';
 import { Button } from '../components/ui/Button';
-import { allActivitiesList } from '../data/tripSuggestions';
+import { catalogService } from '../services/catalogService';
 import { ActivityItem, ActivityFilterState, ActivityGroupByOption, ActivitySortOption, Trip } from '../types/trip';
 import { authService } from '../services/authService';
 import { tripService } from '../services/tripService';
+import { useToast } from '../context/ToastContext';
 
 const sortOptions: SortOption<ActivitySortOption>[] = [
   { value: 'rating-desc', label: 'Rating: High to Low' },
@@ -39,8 +40,11 @@ const groupByOptions: GroupByOptionItem<ActivityGroupByOption>[] = [
 ];
 
 export const ActivitySearch: React.FC = () => {
+  const { showToast } = useToast();
   const [currentUser, setCurrentUser] = useState(authService.getCurrentUser());
   const [userTrips, setUserTrips] = useState<Trip[]>([]);
+  const [allActivitiesList, setAllActivitiesList] = useState<ActivityItem[]>([]);
+  const [isLoadingActivities, setIsLoadingActivities] = useState(true);
 
   // Filter State
   const [filters, setFilters] = useState<ActivityFilterState>({
@@ -66,9 +70,31 @@ export const ActivitySearch: React.FC = () => {
     const user = authService.getCurrentUser();
     setCurrentUser(user);
     if (user) {
-      const trips = tripService.getUserTrips(user.id);
-      setUserTrips(trips);
+      void tripService.getUserTrips(user.id).then((trips) => {
+        setUserTrips(trips);
+      });
     }
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setIsLoadingActivities(true);
+      try {
+        const activities = await catalogService.getActivities();
+        if (!cancelled) setAllActivitiesList(activities);
+      } catch {
+        if (!cancelled) {
+          showToast('error', 'Could not load activities', 'Please check your connection and try again.');
+        }
+      } finally {
+        if (!cancelled) setIsLoadingActivities(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Extract unique cities and categories
@@ -76,13 +102,13 @@ export const ActivitySearch: React.FC = () => {
     const set = new Set<string>();
     allActivitiesList.forEach((a) => set.add(a.city));
     return ['all', ...Array.from(set).sort()];
-  }, []);
+  }, [allActivitiesList]);
 
   const availableCategories = useMemo(() => {
     const set = new Set<string>();
     allActivitiesList.forEach((a) => set.add(a.category));
     return ['all', ...Array.from(set).sort()];
-  }, []);
+  }, [allActivitiesList]);
 
   // Filter & Sort Logic
   const filteredActivities = useMemo(() => {
@@ -159,7 +185,7 @@ export const ActivitySearch: React.FC = () => {
     });
 
     return result;
-  }, [filters]);
+  }, [filters, allActivitiesList]);
 
   // Grouping Logic
   const groupedActivities = useMemo(() => {
@@ -491,7 +517,14 @@ export const ActivitySearch: React.FC = () => {
         <ActiveFilterChips chips={activeChips} onClearAll={handleClearAllFilters} />
 
         {/* Activity Results Grid / Grouped Sections */}
-        {filteredActivities.length === 0 ? (
+        {isLoadingActivities ? (
+          <div className="bg-[#FFF9EE] rounded-3xl border border-[#DAD4C7]/80 p-8 sm:p-14 text-center space-y-3 shadow-sm">
+            <div className="w-14 h-14 rounded-2xl bg-[#FCFAF5] border border-[#DAD4C7] flex items-center justify-center mx-auto text-[#4E7360] animate-pulse">
+              <Ticket className="w-7 h-7" />
+            </div>
+            <p className="text-xs text-[#6F6A60]">Loading activities…</p>
+          </div>
+        ) : filteredActivities.length === 0 ? (
           /* Empty State */
           <div className="bg-[#FFF9EE] rounded-3xl border border-[#DAD4C7]/80 p-8 sm:p-14 text-center space-y-4 shadow-sm">
             <div className="w-14 h-14 rounded-2xl bg-[#FCFAF5] border border-[#DAD4C7] flex items-center justify-center mx-auto text-[#4E7360]">
@@ -579,7 +612,7 @@ export const ActivitySearch: React.FC = () => {
         target={targetForAddToTrip}
         onSuccess={() => {
           if (currentUser) {
-            setUserTrips(tripService.getUserTrips(currentUser.id));
+            void tripService.getUserTrips(currentUser.id).then(setUserTrips);
           }
         }}
       />

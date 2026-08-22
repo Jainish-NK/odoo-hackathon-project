@@ -1,6 +1,10 @@
 import { Destination, PreviousTrip } from '../types/landing';
+import { catalogService } from '../services/catalogService';
 
-export const mockDestinations: Destination[] = [
+// Static fallback so the discovery screens still render something even if
+// the backend is unreachable (offline demo, API down) — real catalog data
+// from the backend overwrites this below once the fetch resolves.
+const FALLBACK_DESTINATIONS: Destination[] = [
   {
     id: 'dest_paris',
     city: 'Paris',
@@ -171,6 +175,15 @@ export const mockDestinations: Destination[] = [
     highlight: 'Lake Zurich Promenade & Lindenhof',
   },
 ];
+
+export let mockDestinations: Destination[] = FALLBACK_DESTINATIONS;
+
+try {
+  const realCities = await catalogService.getCities();
+  if (realCities.length > 0) mockDestinations = realCities;
+} catch {
+  // Backend unreachable at load time — keep the static fallback above.
+}
 
 export const mockPreviousTrips: PreviousTrip[] = [
   {

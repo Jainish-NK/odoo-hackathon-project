@@ -30,11 +30,12 @@ export const TravelInsights: React.FC = () => {
 
   useEffect(() => {
     const user = authService.getCurrentUser();
-    if (user) {
-      setCurrentUser(user);
-      const loadedTrips = tripService.getUserTrips(user.id);
+    if (!user) return;
+    setCurrentUser(user);
+    void (async () => {
+      const loadedTrips = await tripService.getUserTrips(user.id);
       setAllUserTrips(loadedTrips);
-    }
+    })();
   }, []);
 
   // Filtered trips by time range and selection

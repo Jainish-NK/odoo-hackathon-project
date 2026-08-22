@@ -66,12 +66,15 @@ export const Community: React.FC = () => {
   useEffect(() => {
     const user = authService.getCurrentUser();
     setCurrentUser(user);
-    const loadedPosts = communityService.getPublicPosts();
-    setPosts(loadedPosts);
+
+    const localPosts = communityService.getPublicPosts();
+    setPosts(localPosts);
+    void communityService.getRealPublicTrips().then((realPosts) => {
+      if (realPosts.length > 0) setPosts([...realPosts, ...localPosts]);
+    });
 
     if (user) {
-      const trips = tripService.getUserTrips(user.id);
-      setUserTrips(trips);
+      void tripService.getUserTrips(user.id).then(setUserTrips);
     }
   }, []);
 
@@ -201,7 +204,7 @@ export const Community: React.FC = () => {
   };
 
   // Copy Trip Handler
-  const handleCopyTrip = (post: CommunityPost) => {
+  const handleCopyTrip = async (post: CommunityPost) => {
     const user = authService.getCurrentUser();
     if (!user) {
       showToast('info', 'Sign In Required', 'Please sign in to copy this itinerary to your personal trips.');
@@ -215,35 +218,26 @@ export const Community: React.FC = () => {
     }
 
     // Lookup public trip source
-    const sourceTrip = tripService.getTripById(post.tripId);
+    const sourceTrip = await tripService.getTripById(post.tripId);
     if (sourceTrip) {
-      // Clone trip for current user
-      const cloned = tripService.cloneTripForUser(sourceTrip, user.id);
+      // Clone trip for current user via the real backend copy endpoint
+      const cloned = await tripService.cloneTripForUser(sourceTrip, user.id);
       showToast('success', 'Trip Copied!', `"${cloned.name}" has been copied to your personal trips.`);
-      setUserTrips(tripService.getUserTrips(user.id));
+      setUserTrips(await tripService.getUserTrips(user.id));
       navigate(`/trips/${cloned.id}/itinerary`);
     } else {
       // Fallback clone based on post metadata
-      const created = tripService.createTrip({
+      const created = await tripService.createTrip({
         userId: user.id,
         name: `${post.tripName || post.destinationCity} (Copy)`,
         startDate: '2026-09-10',
         endDate: '2026-09-17',
-        destinations: [
-          {
-            id: `dest_${Date.now()}`,
-            city: post.destinationCity,
-            country: post.destinationCountry,
-            region: 'Europe',
-            flag: '🌍',
-            image: post.imageUrl || 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?q=80&w=800&auto=format&fit=crop',
-          },
-        ],
+        destinations: [],
         notes: `Copied from community post by ${post.authorName}: ${post.title}`,
       });
 
       showToast('success', 'Trip Copied!', `"${created.name}" was added to your trips.`);
-      setUserTrips(tripService.getUserTrips(user.id));
+      setUserTrips(await tripService.getUserTrips(user.id));
       navigate(`/trips/${created.id}/itinerary`);
     }
   };
