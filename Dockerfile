@@ -41,4 +41,4 @@ COPY backend/prisma ./prisma
 RUN npx prisma generate
 COPY --from=build /usr/src/app/backend/dist ./dist
 EXPOSE 4000
-CMD ["node", "dist/server.js"]
+CMD ["node", "dist/src/server.js"]
