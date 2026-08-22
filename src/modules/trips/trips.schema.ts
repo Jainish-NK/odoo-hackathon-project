@@ -12,6 +12,7 @@ export const createTripSchema = z
     coverImageUrl: z.string().url().max(2048).optional(),
     startDate: z.coerce.date(),
     endDate: z.coerce.date(),
+    visibility: z.nativeEnum(TripVisibility).optional(),
     budgetAmount: z.number().min(0).optional(),
   })
   .refine((data) => data.endDate >= data.startDate, {
@@ -40,9 +41,24 @@ export const updateTripSchema = z
   });
 export type UpdateTripInput = z.infer<typeof updateTripSchema>;
 
+const TRIP_SORT_VALUES = [
+  'startDate',
+  '-startDate',
+  'endDate',
+  '-endDate',
+  'createdAt',
+  '-createdAt',
+  'updatedAt',
+  '-updatedAt',
+  'name',
+  '-name',
+] as const;
+
 export const listTripsQuerySchema = z.object({
   page: z.coerce.number().int().positive().optional(),
   limit: z.coerce.number().int().positive().optional(),
   status: z.nativeEnum(TripStatus).optional(),
+  sort: z.enum(TRIP_SORT_VALUES).optional(),
 });
 export type ListTripsQuery = z.infer<typeof listTripsQuerySchema>;
+export type TripSort = (typeof TRIP_SORT_VALUES)[number];

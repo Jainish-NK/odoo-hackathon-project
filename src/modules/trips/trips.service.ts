@@ -38,6 +38,8 @@ export const tripsService = {
       coverImageUrl: input.coverImageUrl,
       startDate: input.startDate,
       endDate: input.endDate,
+      visibility: input.visibility,
+      shareSlug: input.visibility === TripVisibility.PUBLIC ? generateShareSlug(input.name) : undefined,
       budgetAmount: input.budgetAmount,
     });
   },
@@ -48,6 +50,7 @@ export const tripsService = {
       userId,
       pagination,
       query.status as TripStatus | undefined,
+      query.sort,
     );
     return { items, meta: buildPaginationMeta(pagination, total) };
   },

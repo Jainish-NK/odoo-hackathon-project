@@ -1,3 +1,5 @@
+import { Trip } from '@prisma/client';
+
 import { tripStopsRepository } from './trip-stops.repository';
 import { CreateStopInput, ReorderStopsInput, UpdateStopInput } from './trip-stops.schema';
 import { tripsService } from './trips.service';
@@ -10,6 +12,13 @@ async function assertStopBelongsToTrip(tripId: string, stopId: string) {
   return stop;
 }
 
+/** A stop's date range must sit entirely within its parent trip's date range. */
+function assertStopDatesWithinTrip(trip: Trip, startDate: Date, endDate: Date): void {
+  if (startDate < trip.startDate || endDate > trip.endDate) {
+    throw new ValidationError("Stop dates must fall within the trip's date range");
+  }
+}
+
 export const tripStopsService = {
   async listStops(tripId: string, userId: string) {
     await tripsService.getOwnedTrip(tripId, userId);
@@ -17,10 +26,12 @@ export const tripStopsService = {
   },
 
   async addStop(tripId: string, userId: string, input: CreateStopInput) {
-    await tripsService.getOwnedTrip(tripId, userId);
+    const trip = await tripsService.getOwnedTrip(tripId, userId);
 
     const city = await tripStopsRepository.cityExists(input.cityId);
     if (!city) throw new NotFoundError('City');
+
+    assertStopDatesWithinTrip(trip, input.startDate, input.endDate);
 
     const position = input.position ?? (await tripStopsRepository.nextPosition(tripId));
 
@@ -34,13 +45,15 @@ export const tripStopsService = {
   },
 
   async updateStop(tripId: string, stopId: string, userId: string, input: UpdateStopInput) {
-    await tripsService.getOwnedTrip(tripId, userId);
-    await assertStopBelongsToTrip(tripId, stopId);
+    const trip = await tripsService.getOwnedTrip(tripId, userId);
+    const stop = await assertStopBelongsToTrip(tripId, stopId);
 
     if (input.cityId) {
       const city = await tripStopsRepository.cityExists(input.cityId);
       if (!city) throw new NotFoundError('City');
     }
+
+    assertStopDatesWithinTrip(trip, input.startDate ?? stop.startDate, input.endDate ?? stop.endDate);
 
     return tripStopsRepository.update(stopId, input);
   },

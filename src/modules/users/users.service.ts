@@ -3,6 +3,7 @@ import { User } from '@prisma/client';
 import { usersRepository } from './users.repository';
 import { UpdateProfileInput } from './users.schema';
 
+import { tokenStore } from '@/modules/auth/token.store';
 import { ConflictError, NotFoundError } from '@/utils/errors';
 
 type PublicUser = Omit<User, 'passwordHash'>;
@@ -26,6 +27,7 @@ export const usersService = {
 
   async deleteAccount(userId: string): Promise<void> {
     await usersRepository.deleteById(userId);
+    await tokenStore.revokeAllRefreshSessions(userId);
   },
 
   async listSavedDestinations(userId: string) {

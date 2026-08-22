@@ -1,7 +1,7 @@
 import { Router } from 'express';
 
 import { usersController } from './users.controller';
-import { cityIdParamSchema, saveDestinationSchema, updateProfileSchema } from './users.schema';
+import { cityIdParamSchema, updateProfileSchema } from './users.schema';
 
 import { authenticate } from '@/middleware/auth.middleware';
 import { validate } from '@/middleware/validation.middleware';
@@ -21,8 +21,8 @@ router.delete('/me', asyncHandler(usersController.deleteMe));
 
 router.get('/me/saved-destinations', asyncHandler(usersController.listSavedDestinations));
 router.post(
-  '/me/saved-destinations',
-  validate({ body: saveDestinationSchema }),
+  '/me/saved-destinations/:cityId',
+  validate({ params: cityIdParamSchema }),
   asyncHandler(usersController.saveDestination),
 );
 router.delete(

@@ -1,6 +1,10 @@
 import { Request, Response } from 'express';
 
-import { AddTripActivityInput, UpdateTripActivityInput } from './trip-activities.schema';
+import {
+  AddTripActivityInput,
+  ReorderTripActivitiesInput,
+  UpdateTripActivityInput,
+} from './trip-activities.schema';
 import { tripActivitiesService } from './trip-activities.service';
 
 import { sendSuccess } from '@/utils/response';
@@ -38,5 +42,17 @@ export const tripActivitiesController = {
       req.user!.id,
     );
     sendSuccess(res, { message: 'Activity removed from trip' });
+  },
+
+  async reorder(
+    req: Request<{ tripId: string }, unknown, ReorderTripActivitiesInput>,
+    res: Response,
+  ): Promise<void> {
+    const activities = await tripActivitiesService.reorderActivities(
+      req.params.tripId,
+      req.user!.id,
+      req.body,
+    );
+    sendSuccess(res, activities);
   },
 };

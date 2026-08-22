@@ -3,6 +3,7 @@ import { Router } from 'express';
 import { tripActivitiesController } from './trip-activities.controller';
 import {
   addTripActivitySchema,
+  reorderTripActivitiesSchema,
   tripActivityParamSchema,
   tripIdOnlyParamSchema,
   updateTripActivitySchema,
@@ -18,6 +19,12 @@ router.post(
   '/',
   validate({ params: tripIdOnlyParamSchema, body: addTripActivitySchema }),
   asyncHandler(tripActivitiesController.add),
+);
+
+router.patch(
+  '/reorder',
+  validate({ params: tripIdOnlyParamSchema, body: reorderTripActivitiesSchema }),
+  asyncHandler(tripActivitiesController.reorder),
 );
 
 router.patch(

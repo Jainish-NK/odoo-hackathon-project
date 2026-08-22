@@ -63,9 +63,11 @@ model User {
   email               String   @unique
   passwordHash        String
   name                String
+  phone               String?
   profilePhotoUrl     String?
   role                Role     @default(USER)
   languagePreference  String   @default("en")
+  isActive            Boolean  @default(true)
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 

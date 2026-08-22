@@ -4,6 +4,8 @@ import { authController } from './auth.controller';
 import {
   forgotPasswordSchema,
   loginSchema,
+  logoutSchema,
+  refreshTokenSchema,
   registerSchema,
   resetPasswordSchema,
 } from './auth.schema';
@@ -33,6 +35,28 @@ router.post('/register', validate({ body: registerSchema }), asyncHandler(authCo
  *     summary: Authenticate with email and password
  */
 router.post('/login', validate({ body: loginSchema }), asyncHandler(authController.login));
+
+/**
+ * @openapi
+ * /auth/refresh:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Exchange a valid refresh token for a new access/refresh pair
+ */
+router.post(
+  '/refresh',
+  validate({ body: refreshTokenSchema }),
+  asyncHandler(authController.refresh),
+);
+
+/**
+ * @openapi
+ * /auth/logout:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Revoke a refresh token, ending that session
+ */
+router.post('/logout', validate({ body: logoutSchema }), asyncHandler(authController.logout));
 
 /**
  * @openapi

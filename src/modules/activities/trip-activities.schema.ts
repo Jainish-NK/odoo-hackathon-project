@@ -39,3 +39,15 @@ export const updateTripActivitySchema = z
     message: 'At least one field must be provided',
   });
 export type UpdateTripActivityInput = z.infer<typeof updateTripActivitySchema>;
+
+export const reorderTripActivitiesSchema = z.object({
+  order: z
+    .array(
+      z.object({
+        tripActivityId: z.string().uuid(),
+        position: z.number().int().min(0),
+      }),
+    )
+    .min(1, 'order must contain at least one trip activity'),
+});
+export type ReorderTripActivitiesInput = z.infer<typeof reorderTripActivitiesSchema>;

@@ -8,7 +8,28 @@ export const tripActivitiesRepository = {
   },
 
   activityExists(activityId: string) {
-    return prisma.activity.findUnique({ where: { id: activityId }, select: { id: true } });
+    return prisma.activity.findUnique({
+      where: { id: activityId },
+      select: { id: true, cityId: true },
+    });
+  },
+
+  listIdsByTrip(tripId: string) {
+    return prisma.tripActivity.findMany({
+      where: { tripStop: { tripId } },
+      select: { id: true },
+    });
+  },
+
+  reorder(order: { tripActivityId: string; position: number }[]) {
+    return prisma.$transaction(
+      order.map(({ tripActivityId, position }) =>
+        prisma.tripActivity.update({
+          where: { id: tripActivityId },
+          data: { position },
+        }),
+      ),
+    );
   },
 
   findById(tripActivityId: string) {
