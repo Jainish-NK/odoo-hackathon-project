@@ -417,7 +417,7 @@ export const LandingPage: React.FC = () => {
                 leftIcon={<Plus className="w-4 h-4 text-[#252525]" />}
                 className="shadow-sm hover:shadow-md font-bold"
               >
-                + Plan a Trip
+                Plan a Trip
               </Button>
             }
           />
