@@ -11,9 +11,11 @@ describe('Itinerary', () => {
   let app: Express;
 
   const email = `itinerary.${Date.now()}@globetrotter.dev`;
+  const otherEmail = `itinerary.other.${Date.now()}@globetrotter.dev`;
   const password = 'Password123!';
 
   let token: string;
+  let otherToken: string;
   let tripId: string;
   let stopId: string;
   let cityId: string;
@@ -25,13 +27,21 @@ describe('Itinerary', () => {
   beforeAll(async () => {
     app = createApp();
 
-    const regRes = await request(app)
-      .post('/api/v1/auth/register')
-      .send({ email, password, name: 'Itinerary Tester' });
+    const [regRes, otherRegRes] = await Promise.all([
+      request(app)
+        .post('/api/v1/auth/register')
+        .send({ email, password, name: 'Itinerary Tester' }),
+      request(app)
+        .post('/api/v1/auth/register')
+        .send({ email: otherEmail, password, name: 'Itinerary Intruder' }),
+    ]);
     token = regRes.body.data.tokens.accessToken;
+    otherToken = otherRegRes.body.data.tokens.accessToken;
 
     const suffix = Date.now();
-    const city = await prisma.city.create({ data: { name: `ItinCity-${suffix}`, country: 'Testland' } });
+    const city = await prisma.city.create({
+      data: { name: `ItinCity-${suffix}`, country: 'Testland' },
+    });
     cityId = city.id;
 
     const [activityA, activityB] = await Promise.all([
@@ -74,7 +84,7 @@ describe('Itinerary', () => {
     await prisma.trip.deleteMany({ where: { id: tripId } });
     await prisma.activity.deleteMany({ where: { id: { in: [activityAId, activityBId] } } });
     await prisma.city.deleteMany({ where: { id: cityId } });
-    await prisma.user.deleteMany({ where: { email } });
+    await prisma.user.deleteMany({ where: { email: { in: [email, otherEmail] } } });
     await prisma.$disconnect();
   });
 
@@ -111,6 +121,13 @@ describe('Itinerary', () => {
         .set('Authorization', `Bearer ${token}`);
       expect(res.status).toBe(404);
     });
+
+    it("prevents another user from viewing this trip's itinerary", async () => {
+      const res = await request(app)
+        .get(`/api/v1/trips/${tripId}/itinerary`)
+        .set('Authorization', `Bearer ${otherToken}`);
+      expect(res.status).toBe(403);
+    });
   });
 
   describe('PATCH /api/v1/trips/:tripId/itinerary/reorder', () => {
@@ -141,6 +158,20 @@ describe('Itinerary', () => {
 
       expect(res.status).toBe(400);
       expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    });
+
+    it("prevents another user from reordering this trip's itinerary", async () => {
+      const res = await request(app)
+        .patch(`/api/v1/trips/${tripId}/itinerary/reorder`)
+        .set('Authorization', `Bearer ${otherToken}`)
+        .send({
+          items: [{ tripActivityId: tripActivityAId, position: 0 }],
+        });
+
+      expect(res.status).toBe(403);
+
+      const unchanged = await prisma.tripActivity.findUnique({ where: { id: tripActivityAId } });
+      expect(unchanged?.position).toBe(1);
     });
   });
 });

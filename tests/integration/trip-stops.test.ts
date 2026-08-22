@@ -24,12 +24,8 @@ describe('Trip stops', () => {
     app = createApp();
 
     const [resA, resB] = await Promise.all([
-      request(app)
-        .post('/api/v1/auth/register')
-        .send({ email: emailA, password, name: 'Stops A' }),
-      request(app)
-        .post('/api/v1/auth/register')
-        .send({ email: emailB, password, name: 'Stops B' }),
+      request(app).post('/api/v1/auth/register').send({ email: emailA, password, name: 'Stops A' }),
+      request(app).post('/api/v1/auth/register').send({ email: emailB, password, name: 'Stops B' }),
     ]);
     tokenA = resA.body.data.tokens.accessToken;
     tokenB = resB.body.data.tokens.accessToken;

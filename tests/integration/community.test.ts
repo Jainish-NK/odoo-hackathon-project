@@ -73,7 +73,7 @@ describe('Community and sharing', () => {
       expect(res.status).toBe(404);
     });
 
-    it("cannot be copied by another user", async () => {
+    it('cannot be copied by another user', async () => {
       const res = await request(app)
         .post(`/api/v1/trips/${privateTripId}/copy`)
         .set('Authorization', `Bearer ${tokenB}`)

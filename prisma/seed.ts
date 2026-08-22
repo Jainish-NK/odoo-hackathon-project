@@ -36,6 +36,20 @@ async function main() {
       email: 'traveler@globetrotter.dev',
       passwordHash,
       name: 'Priya Traveler',
+      phone: '+1 415-555-0182',
+      role: Role.USER,
+      languagePreference: 'en',
+    },
+  });
+
+  const secondTraveler = await prisma.user.upsert({
+    where: { email: 'sam@globetrotter.dev' },
+    update: {},
+    create: {
+      email: 'sam@globetrotter.dev',
+      passwordHash,
+      name: 'Sam Explorer',
+      phone: '+44 20 7946 0958',
       role: Role.USER,
       languagePreference: 'en',
     },
@@ -303,6 +317,17 @@ async function main() {
   for (const a of activityData) {
     const cityId = cities.get(a.city);
     if (!cityId) continue;
+
+    // Activity has no unique constraint on (cityId, name) to upsert against
+    // (there's no product reason to force city+activity names unique app-wide),
+    // so re-running the seed is made idempotent here instead: skip creating
+    // an activity that already exists under this name/city.
+    const existing = await prisma.activity.findFirst({ where: { cityId, name: a.name } });
+    if (existing) {
+      activities.set(a.name, existing.id);
+      continue;
+    }
+
     const created = await prisma.activity.create({
       data: {
         cityId,
@@ -321,6 +346,12 @@ async function main() {
     where: { userId_cityId: { userId: traveler.id, cityId: cities.get('Bali')! } },
     update: {},
     create: { userId: traveler.id, cityId: cities.get('Bali')! },
+  });
+
+  await prisma.savedDestination.upsert({
+    where: { userId_cityId: { userId: secondTraveler.id, cityId: cities.get('Tokyo')! } },
+    update: {},
+    create: { userId: secondTraveler.id, cityId: cities.get('Tokyo')! },
   });
 
   const existingTrip = await prisma.trip.findFirst({
@@ -447,9 +478,206 @@ async function main() {
     });
   }
 
+  // A second, single-city trip for the same traveler — still being planned
+  // (DRAFT, PRIVATE) — so trip listing/filtering has more than one entry
+  // and more than one status to demo.
+  const existingSoloTrip = await prisma.trip.findFirst({
+    where: { userId: traveler.id, name: 'Tokyo Solo Adventure' },
+  });
+
+  if (!existingSoloTrip) {
+    const soloTrip = await prisma.trip.create({
+      data: {
+        userId: traveler.id,
+        name: 'Tokyo Solo Adventure',
+        description: 'A week exploring Tokyo neighborhoods and food.',
+        startDate: new Date('2026-11-05'),
+        endDate: new Date('2026-11-10'),
+        status: TripStatus.DRAFT,
+        visibility: TripVisibility.PRIVATE,
+        budgetAmount: 1200,
+      },
+    });
+
+    const tokyoStop = await prisma.tripStop.create({
+      data: {
+        tripId: soloTrip.id,
+        cityId: cities.get('Tokyo')!,
+        startDate: new Date('2026-11-05'),
+        endDate: new Date('2026-11-10'),
+        position: 0,
+      },
+    });
+
+    await prisma.tripActivity.createMany({
+      data: [
+        {
+          tripStopId: tokyoStop.id,
+          activityId: activities.get('Senso-ji Temple Walking Tour')!,
+          date: new Date('2026-11-06'),
+          startTime: '09:00',
+          endTime: '11:00',
+          position: 0,
+        },
+        {
+          tripStopId: tokyoStop.id,
+          activityId: activities.get('Tsukiji Outer Market Food Tour')!,
+          date: new Date('2026-11-06'),
+          startTime: '12:00',
+          endTime: '14:30',
+          position: 1,
+        },
+        {
+          tripStopId: tokyoStop.id,
+          activityId: activities.get('Shibuya Nightlife Crawl')!,
+          date: new Date('2026-11-08'),
+          startTime: '20:00',
+          endTime: '23:00',
+          position: 0,
+        },
+      ],
+    });
+
+    await prisma.expense.createMany({
+      data: [
+        {
+          tripId: soloTrip.id,
+          tripStopId: tokyoStop.id,
+          category: ExpenseCategory.TRANSPORT,
+          description: 'Flights + JR Pass',
+          amount: 780,
+          date: new Date('2026-11-05'),
+        },
+        {
+          tripId: soloTrip.id,
+          tripStopId: tokyoStop.id,
+          category: ExpenseCategory.ACCOMMODATION,
+          description: 'Shinjuku hotel (5 nights)',
+          amount: 620,
+          date: new Date('2026-11-05'),
+        },
+      ],
+    });
+  }
+
+  // A second traveler with their own multi-city public trip, so the
+  // community listing has more than one item and copy/popularity sorting
+  // has something to differentiate.
+  const existingSecondTravelerTrip = await prisma.trip.findFirst({
+    where: { userId: secondTraveler.id, name: 'Southeast Asia Highlights' },
+  });
+
+  if (!existingSecondTravelerTrip) {
+    const seaTrip = await prisma.trip.create({
+      data: {
+        userId: secondTraveler.id,
+        name: 'Southeast Asia Highlights',
+        description: 'Island relaxation in Bali followed by street food in Bangkok.',
+        startDate: new Date('2026-10-01'),
+        endDate: new Date('2026-10-09'),
+        status: TripStatus.PLANNED,
+        visibility: TripVisibility.PUBLIC,
+        shareSlug: 'southeast-asia-highlights-demo',
+      },
+    });
+
+    const baliStop = await prisma.tripStop.create({
+      data: {
+        tripId: seaTrip.id,
+        cityId: cities.get('Bali')!,
+        startDate: new Date('2026-10-01'),
+        endDate: new Date('2026-10-05'),
+        position: 0,
+      },
+    });
+
+    const bangkokStop = await prisma.tripStop.create({
+      data: {
+        tripId: seaTrip.id,
+        cityId: cities.get('Bangkok')!,
+        startDate: new Date('2026-10-05'),
+        endDate: new Date('2026-10-09'),
+        position: 1,
+      },
+    });
+
+    await prisma.tripActivity.createMany({
+      data: [
+        {
+          tripStopId: baliStop.id,
+          activityId: activities.get('Ubud Rice Terrace Trek')!,
+          date: new Date('2026-10-02'),
+          startTime: '08:00',
+          endTime: '12:00',
+          position: 0,
+        },
+        {
+          tripStopId: baliStop.id,
+          activityId: activities.get('Uluwatu Sunset & Kecak Fire Dance')!,
+          date: new Date('2026-10-03'),
+          startTime: '17:00',
+          endTime: '19:30',
+          position: 0,
+        },
+        {
+          tripStopId: bangkokStop.id,
+          activityId: activities.get('Floating Market Day Trip')!,
+          date: new Date('2026-10-06'),
+          startTime: '07:00',
+          endTime: '12:00',
+          position: 0,
+        },
+        {
+          tripStopId: bangkokStop.id,
+          activityId: activities.get('Muay Thai Class')!,
+          date: new Date('2026-10-07'),
+          startTime: '16:00',
+          endTime: '17:30',
+          position: 0,
+        },
+      ],
+    });
+
+    await prisma.expense.createMany({
+      data: [
+        {
+          tripId: seaTrip.id,
+          category: ExpenseCategory.TRANSPORT,
+          description: 'Round-trip flights + inter-island transfer',
+          amount: 540,
+          date: new Date('2026-10-01'),
+        },
+        {
+          tripId: seaTrip.id,
+          tripStopId: baliStop.id,
+          category: ExpenseCategory.ACCOMMODATION,
+          description: 'Ubud villa (4 nights)',
+          amount: 320,
+          date: new Date('2026-10-01'),
+        },
+        {
+          tripId: seaTrip.id,
+          tripStopId: bangkokStop.id,
+          category: ExpenseCategory.ACCOMMODATION,
+          description: 'Bangkok hotel (4 nights)',
+          amount: 260,
+          date: new Date('2026-10-05'),
+        },
+        {
+          tripId: seaTrip.id,
+          category: ExpenseCategory.MEALS,
+          description: 'Estimated meals budget',
+          amount: 280,
+          date: new Date('2026-10-01'),
+        },
+      ],
+    });
+  }
+
   console.log('Seed complete.');
-  console.log(`Admin login:    ${admin.email} / Password123!`);
-  console.log(`Traveler login: ${traveler.email} / Password123!`);
+  console.log(`Admin login:      ${admin.email} / Password123!`);
+  console.log(`Traveler login:   ${traveler.email} / Password123!`);
+  console.log(`2nd user login:   ${secondTraveler.email} / Password123!`);
 }
 
 main()

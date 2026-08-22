@@ -22,12 +22,8 @@ describe('Users', () => {
     app = createApp();
 
     const [resA, resB] = await Promise.all([
-      request(app)
-        .post('/api/v1/auth/register')
-        .send({ email: emailA, password, name: 'User A' }),
-      request(app)
-        .post('/api/v1/auth/register')
-        .send({ email: emailB, password, name: 'User B' }),
+      request(app).post('/api/v1/auth/register').send({ email: emailA, password, name: 'User A' }),
+      request(app).post('/api/v1/auth/register').send({ email: emailB, password, name: 'User B' }),
     ]);
 
     tokenA = resA.body.data.tokens.accessToken;
@@ -52,7 +48,9 @@ describe('Users', () => {
     });
 
     it("returns the authenticated user's own profile without the password hash", async () => {
-      const res = await request(app).get('/api/v1/users/me').set('Authorization', `Bearer ${tokenA}`);
+      const res = await request(app)
+        .get('/api/v1/users/me')
+        .set('Authorization', `Bearer ${tokenA}`);
 
       expect(res.status).toBe(200);
       expect(res.body.data.email).toBe(emailA);

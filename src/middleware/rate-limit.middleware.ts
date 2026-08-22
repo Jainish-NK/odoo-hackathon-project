@@ -19,6 +19,14 @@ export function createRateLimiter(name: string, overrides: Partial<Options> = {}
     limit: env.RATE_LIMIT_MAX_REQUESTS,
     standardHeaders: true,
     legacyHeaders: false,
+    // Rate limiting is a protective layer, not a correctness dependency: if
+    // Redis is unreachable, express-rate-limit's default is to throw and let
+    // that 500 the request. Since this store is mounted globally on every
+    // API call, that would turn a Redis blip into a full outage. Failing
+    // open (skip limiting, let the request through) keeps the API usable
+    // and matches "Redis must not be a hard dependency for anything that
+    // can safely run without it."
+    passOnStoreError: true,
     store: new RedisStore({
       // ioredis' `call` overloads type their rest args as a fixed tuple, which is
       // fundamentally incompatible with the string[] signature rate-limit-redis

@@ -24,8 +24,12 @@ describe('Expenses and budget', () => {
     app = createApp();
 
     const [resA, resB] = await Promise.all([
-      request(app).post('/api/v1/auth/register').send({ email: emailA, password, name: 'Budget A' }),
-      request(app).post('/api/v1/auth/register').send({ email: emailB, password, name: 'Budget B' }),
+      request(app)
+        .post('/api/v1/auth/register')
+        .send({ email: emailA, password, name: 'Budget A' }),
+      request(app)
+        .post('/api/v1/auth/register')
+        .send({ email: emailB, password, name: 'Budget B' }),
     ]);
     tokenA = resA.body.data.tokens.accessToken;
     tokenB = resB.body.data.tokens.accessToken;
@@ -188,8 +192,12 @@ describe('Expenses and budget', () => {
       expect(res.body.data.isOverBudget).toBe(true);
       expect(res.body.data.averagePerDayBudget).toBe(50);
 
-      const day1 = res.body.data.dailyBreakdown.find((d: { date: string }) => d.date === '2026-05-01');
-      const day2 = res.body.data.dailyBreakdown.find((d: { date: string }) => d.date === '2026-05-02');
+      const day1 = res.body.data.dailyBreakdown.find(
+        (d: { date: string }) => d.date === '2026-05-01',
+      );
+      const day2 = res.body.data.dailyBreakdown.find(
+        (d: { date: string }) => d.date === '2026-05-02',
+      );
       expect(day1.total).toBe(50);
       expect(day1.byCategory.TRANSPORT).toBe(30);
       expect(day1.byCategory.ACTIVITIES).toBe(20);

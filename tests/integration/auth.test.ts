@@ -162,7 +162,11 @@ describe('Auth', () => {
 
     it('rejects a well-formed token for a user that no longer exists', async () => {
       const ghostToken = jwt.sign(
-        { sub: '00000000-0000-0000-0000-000000000000', email: 'ghost@globetrotter.dev', role: 'USER' },
+        {
+          sub: '00000000-0000-0000-0000-000000000000',
+          email: 'ghost@globetrotter.dev',
+          role: 'USER',
+        },
         env.JWT_ACCESS_SECRET,
         { expiresIn: '15m' },
       );
@@ -221,9 +225,7 @@ describe('Auth', () => {
     });
 
     it('exchanges a valid refresh token for a new token pair and rotates it', async () => {
-      const res = await request(app)
-        .post('/api/v1/auth/refresh')
-        .send({ refreshToken });
+      const res = await request(app).post('/api/v1/auth/refresh').send({ refreshToken });
 
       expect(res.status).toBe(200);
       expect(res.body.data.tokens).toHaveProperty('accessToken');
@@ -246,9 +248,7 @@ describe('Auth', () => {
       const logoutRes = await request(app).post('/api/v1/auth/logout').send({ refreshToken });
       expect(logoutRes.status).toBe(200);
 
-      const refreshAttempt = await request(app)
-        .post('/api/v1/auth/refresh')
-        .send({ refreshToken });
+      const refreshAttempt = await request(app).post('/api/v1/auth/refresh').send({ refreshToken });
 
       expect(refreshAttempt.status).toBe(401);
       expect(refreshAttempt.body.error.code).toBe('TOKEN_REVOKED');

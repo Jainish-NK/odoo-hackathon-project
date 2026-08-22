@@ -9,11 +9,7 @@ function toOrderBy(sort?: TripSort): Prisma.TripOrderByWithRelationInput {
   if (!sort) return { startDate: 'desc' };
   const direction: Prisma.SortOrder = sort.startsWith('-') ? 'desc' : 'asc';
   const field = (sort.startsWith('-') ? sort.slice(1) : sort) as
-    | 'startDate'
-    | 'endDate'
-    | 'createdAt'
-    | 'updatedAt'
-    | 'name';
+    'startDate' | 'endDate' | 'createdAt' | 'updatedAt' | 'name';
   return { [field]: direction };
 }
 

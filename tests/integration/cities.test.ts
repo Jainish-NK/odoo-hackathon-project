@@ -64,9 +64,7 @@ describe('Cities', () => {
     });
 
     it('returns an empty page for a search with no matches', async () => {
-      const res = await request(app).get(
-        `/api/v1/cities?search=NoSuchPlace-${suffix}-zzz`,
-      );
+      const res = await request(app).get(`/api/v1/cities?search=NoSuchPlace-${suffix}-zzz`);
       expect(res.status).toBe(200);
       expect(res.body.data).toHaveLength(0);
     });
@@ -80,9 +78,7 @@ describe('Cities', () => {
     });
 
     it('returns 404 for a nonexistent city', async () => {
-      const res = await request(app).get(
-        '/api/v1/cities/00000000-0000-0000-0000-000000000000',
-      );
+      const res = await request(app).get('/api/v1/cities/00000000-0000-0000-0000-000000000000');
       expect(res.status).toBe(404);
     });
   });

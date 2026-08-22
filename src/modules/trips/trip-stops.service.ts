@@ -53,7 +53,11 @@ export const tripStopsService = {
       if (!city) throw new NotFoundError('City');
     }
 
-    assertStopDatesWithinTrip(trip, input.startDate ?? stop.startDate, input.endDate ?? stop.endDate);
+    assertStopDatesWithinTrip(
+      trip,
+      input.startDate ?? stop.startDate,
+      input.endDate ?? stop.endDate,
+    );
 
     return tripStopsRepository.update(stopId, input);
   },

@@ -40,7 +40,8 @@ export const tripsService = {
       startDate: input.startDate,
       endDate: input.endDate,
       visibility: input.visibility,
-      shareSlug: input.visibility === TripVisibility.PUBLIC ? generateShareSlug(input.name) : undefined,
+      shareSlug:
+        input.visibility === TripVisibility.PUBLIC ? generateShareSlug(input.name) : undefined,
       budgetAmount: input.budgetAmount,
     });
   },

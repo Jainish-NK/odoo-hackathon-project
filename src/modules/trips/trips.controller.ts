@@ -1,6 +1,11 @@
 import { Request, Response } from 'express';
 
-import { CreateTripInput, ListTripsQuery, UpdateTripInput, UpdateVisibilityInput } from './trips.schema';
+import {
+  CreateTripInput,
+  ListTripsQuery,
+  UpdateTripInput,
+  UpdateVisibilityInput,
+} from './trips.schema';
 import { tripsService } from './trips.service';
 
 import { sendSuccess } from '@/utils/response';
