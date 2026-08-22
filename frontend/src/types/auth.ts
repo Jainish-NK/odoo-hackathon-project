@@ -32,6 +32,7 @@ export interface User {
   avatarUrl?: string;
   additionalInfo?: string;
   createdAt: string;
+  role?: 'admin' | 'user';
   travelStyles?: string[];
   budgetPreference?: 'Budget' | 'Moderate' | 'Luxury';
   preferredCurrency?: string;

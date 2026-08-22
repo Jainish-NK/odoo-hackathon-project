@@ -15,6 +15,7 @@ import {
   TrendingUp,
   Globe,
   Users,
+  ShieldCheck,
 } from 'lucide-react';
 import { authService } from '../../services/authService';
 import { User } from '../../types/auth';
@@ -293,6 +294,20 @@ export const LandingNavbar: React.FC = () => {
                     <p className="text-[11px] text-[#6F6A60] truncate">{currentUser.email}</p>
                   </div>
                   <div className="py-1">
+                    {authService.isAdminUser(currentUser) && (
+                      <Link
+                        to="/admin"
+                        onClick={() => setIsProfileMenuOpen(false)}
+                        className="w-full text-left px-3 py-2 text-xs font-bold text-[#252525] bg-[#FCFAF5] hover:bg-[#F4C95D]/20 border border-[#DAD4C7] rounded-xl transition-colors flex items-center justify-between cursor-pointer mb-1"
+                      >
+                        <span className="flex items-center gap-2">
+                          <ShieldCheck className="w-3.5 h-3.5 text-[#C29326]" /> Admin Dashboard
+                        </span>
+                        <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-[#252525] text-[#F4C95D]">
+                          ADMIN
+                        </span>
+                      </Link>
+                    )}
                     <Link
                       to="/insights"
                       onClick={() => setIsProfileMenuOpen(false)}
@@ -434,6 +449,18 @@ export const LandingNavbar: React.FC = () => {
               <TrendingUp className="w-4 h-4 inline-block mr-2 text-[#4E7360]" />
               Travel Insights
             </Link>
+            {currentUser && authService.isAdminUser(currentUser) && (
+              <Link
+                to="/admin"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className={`block w-full text-left px-3.5 py-2.5 text-sm font-semibold rounded-xl transition-colors ${
+                  isCurrent('/admin') ? 'bg-[#252525] text-[#F4C95D]' : 'text-[#252525] bg-[#FCFAF5] border border-[#DAD4C7]'
+                }`}
+              >
+                <ShieldCheck className="w-4 h-4 inline-block mr-2 text-[#C29326]" />
+                Admin Dashboard
+              </Link>
+            )}
 
             <div className="pt-2 border-t border-[#DAD4C7]/60 space-y-2">
               <button

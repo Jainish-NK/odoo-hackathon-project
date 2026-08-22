@@ -16,6 +16,7 @@ const UserProfile = lazy(() => import('../pages/UserProfile').then((m) => ({ def
 const Dashboard = lazy(() => import('../pages/Dashboard').then((m) => ({ default: m.Dashboard })));
 const Login = lazy(() => import('../pages/Login').then((m) => ({ default: m.Login })));
 const Register = lazy(() => import('../pages/Register').then((m) => ({ default: m.Register })));
+const AdminDashboard = lazy(() => import('../pages/AdminDashboard').then((m) => ({ default: m.AdminDashboard })));
 const NotFound = lazy(() => import('../pages/NotFound').then((m) => ({ default: m.NotFound })));
 
 // Subtle branded loading state
@@ -94,6 +95,14 @@ export const AppRoutes: React.FC = () => {
           element={
             <ProtectedRoute>
               <UserProfile />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute requireAdmin={true}>
+              <AdminDashboard />
             </ProtectedRoute>
           }
         />

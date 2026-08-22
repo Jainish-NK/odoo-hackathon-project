@@ -27,6 +27,7 @@ const initMockDB = (): User[] => {
       avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80',
       additionalInfo: 'Passionate solo traveler & food photographer. Loving Mediterranean sunsets and alpine hikes.',
       createdAt: '2026-01-15T10:00:00.000Z',
+      role: 'admin',
       travelStyles: ['Cultural', 'Culinary', 'Nature'],
       budgetPreference: 'Moderate',
       preferredCurrency: 'INR (₹)',
@@ -342,6 +343,22 @@ export const authService = {
 
     localStorage.removeItem(STORAGE_KEY_USER);
     return true;
+  },
+
+  /**
+   * Check whether a user has administrative privileges
+   */
+  isAdminUser(user?: User | null): boolean {
+    if (!user) {
+      user = this.getCurrentUser();
+    }
+    if (!user) return false;
+    return (
+      user.role === 'admin' ||
+      user.id === 'usr_default_1' ||
+      user.email.toLowerCase().includes('admin') ||
+      user.email.toLowerCase().includes('jainish')
+    );
   },
 
   /**
