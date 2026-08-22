@@ -24,6 +24,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
       className,
       containerClassName,
       disabled,
+      value,
       ...props
     },
     ref
@@ -58,6 +59,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             ref={ref}
             id={inputId}
             disabled={disabled}
+            value={value !== undefined ? value : ''}
             aria-invalid={Boolean(error)}
             aria-describedby={error ? errorId : helperText ? helperId : undefined}
             className={twMerge(

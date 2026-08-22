@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Mail, Phone, MapPin, Globe2, User as UserIcon, ArrowRight } from 'lucide-react';
 import { AuthLayout } from '../components/auth/AuthLayout';
 import { AuthCard } from '../components/auth/AuthCard';
@@ -14,6 +14,7 @@ import { FormErrors, RegisterFormData } from '../types/auth';
 
 export const Register: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { showToast } = useToast();
 
   const [formData, setFormData] = useState<RegisterFormData>({
@@ -169,8 +170,14 @@ export const Register: React.FC = () => {
       const response = await authService.register(formData);
       if (response.success) {
         showToast('success', 'Account Created!', response.message);
+
+        const redirectTarget =
+          (location.state as { from?: string })?.from ||
+          new URLSearchParams(location.search).get('redirect') ||
+          '/dashboard';
+
         setTimeout(() => {
-          navigate('/dashboard');
+          navigate(redirectTarget, { replace: true });
         }, 300);
       } else {
         showToast('error', 'Registration Failed', response.message);

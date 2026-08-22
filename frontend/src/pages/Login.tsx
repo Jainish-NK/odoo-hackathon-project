@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { User, Mail, ArrowRight } from 'lucide-react';
 import { AuthLayout } from '../components/auth/AuthLayout';
 import { AuthCard } from '../components/auth/AuthCard';
@@ -13,6 +13,7 @@ import { FormErrors, LoginFormData } from '../types/auth';
 
 export const Login: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { showToast } = useToast();
 
   const [formData, setFormData] = useState<LoginFormData>({
@@ -93,8 +94,14 @@ export const Login: React.FC = () => {
       const response = await authService.login(formData);
       if (response.success) {
         showToast('success', 'Welcome Back!', response.message);
+        
+        const redirectTarget =
+          (location.state as { from?: string })?.from ||
+          new URLSearchParams(location.search).get('redirect') ||
+          '/dashboard';
+
         setTimeout(() => {
-          navigate('/dashboard');
+          navigate(redirectTarget, { replace: true });
         }, 300);
       } else {
         showToast('error', 'Login Failed', response.message);
